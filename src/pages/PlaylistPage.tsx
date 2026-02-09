@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Play, Clock, MoreHorizontal, Music, Trash2, Heart, Pencil, Check, X } from "lucide-react";
+import { Play, Clock, MoreHorizontal, Music, Trash2, Heart, Pencil, Check, X, Download, Search, User, Bell, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { getArtworkUrl, formatDuration } from "@/lib/api";
 import DesktopSidebar from "@/components/DesktopSidebar";
+import UpNext from "@/components/UpNext";
+import SearchBar from "@/components/SearchBar";
 
 export default function PlaylistPage() {
     const { id } = useParams();
@@ -15,6 +17,7 @@ export default function PlaylistPage() {
 
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
 
     const playlist = useMemo(() =>
         playlists.find((p) => p.id === id),
@@ -27,15 +30,17 @@ export default function PlaylistPage() {
 
     if (!playlist) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center text-white bg-[#050505] md:pl-80">
+            <div className="min-h-screen flex items-center justify-center text-white bg-[#050505] pl-0 md:pl-80">
                 <DesktopSidebar />
-                <h2 className="text-2xl font-bold mb-4">Playlist not found</h2>
-                <button
-                    onClick={() => navigate("/")}
-                    className="px-6 py-2 bg-emerald-500 rounded-full text-black font-bold"
-                >
-                    Go Home
-                </button>
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold mb-4">Playlist not found</h2>
+                    <button
+                        onClick={() => navigate("/")}
+                        className="px-6 py-2 bg-primary rounded-full text-black font-bold"
+                    >
+                        Go Home
+                    </button>
+                </div>
             </div>
         );
     }
@@ -65,199 +70,200 @@ export default function PlaylistPage() {
         }
     };
 
+    const filteredTracks = playlist.tracks.filter(t =>
+        t.attributes.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.attributes.artistName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        <div className="min-h-screen pb-32 w-full bg-[#050505] text-white md:pl-80 transition-all duration-300">
+        <div className="flex min-h-screen w-full bg-[#050505] overflow-hidden no-scrollbar text-white">
             <DesktopSidebar />
 
-            {/* Header Section */}
-            <div className="relative h-auto md:h-80 flex items-end p-4 md:p-8 pb-6 bg-gradient-to-b from-indigo-900/50 via-[#050505] to-[#050505]">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050505]" />
+            <div className="flex-1 overflow-hidden no-scrollbar flex flex-col pl-0 md:pl-80 relative min-w-0">
+                {/* Top Navigation Bar */}
+                <header className="h-16 flex items-center justify-between px-8 bg-[#050505]/95 backdrop-blur-md sticky top-0 z-40 border-b border-white/5">
+                    <div className="flex items-center gap-4">
 
-                <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6 w-full max-w-7xl mx-auto pt-20 md:pt-0">
-                    {/* Cover Art Placeholder */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="w-40 h-40 md:w-52 md:h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-md bg-white/10 flex items-center justify-center shrink-0 border border-white/5"
-                    >
-                        {playlist.tracks.length > 0 ? (
-                            <img
-                                src={getArtworkUrl(playlist.tracks[0].attributes.artwork.url, 400)}
-                                alt={playlist.name}
-                                className="w-full h-full object-cover rounded-md"
-                            />
-                        ) : (
-                            <Music className="w-16 h-16 md:w-20 md:h-20 text-gray-500" />
-                        )}
-                    </motion.div>
-
-                    {/* Playlist Info */}
-                    <div className="flex flex-col gap-2 mb-2 flex-1 min-w-0 text-center md:text-left items-center md:items-start">
-                        <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Public Playlist</span>
-
-                        {isEditing ? (
-                            <div className="flex items-center gap-2 mb-2 w-full justify-center md:justify-start">
-                                <input
-                                    type="text"
-                                    value={editName}
-                                    onChange={(e) => setEditName(e.target.value)}
-                                    className="bg-white/10 border border-white/20 text-3xl md:text-5xl font-black text-white px-4 py-2 rounded-lg w-full max-w-md focus:outline-none focus:border-emerald-500 text-center md:text-left"
-                                    autoFocus
-                                    onKeyDown={(e) => e.key === "Enter" && handleRename()}
-                                />
-                                <button onClick={handleRename} className="p-2 hover:bg-emerald-500/20 rounded-full text-emerald-500 shrink-0">
-                                    <Check className="w-8 h-8" />
-                                </button>
-                                <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-red-500/20 rounded-full text-red-500 shrink-0">
-                                    <X className="w-8 h-8" />
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="group flex items-center justify-center md:justify-start gap-4 mb-2">
-                                <h1
-                                    className="text-4xl md:text-7xl font-black tracking-tight text-white truncate cursor-pointer hover:underline decoration-emerald-500/50"
-                                    onClick={() => setIsEditing(true)}
-                                >
-                                    {playlist.name}
-                                </h1>
-                                <button
-                                    onClick={() => setIsEditing(true)}
-                                    className="opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/10 rounded-full"
-                                >
-                                    <Pencil className="w-5 h-5 text-gray-400" />
-                                </button>
-                            </div>
-                        )}
-
-                        <p className="text-sm text-gray-400 font-medium mb-2 truncate">
-                            {playlist.tracks.length > 0
-                                ? playlist.tracks.map(t => t.attributes.artistName).slice(0, 3).join(", ") + (playlist.tracks.length > 3 ? " and more" : "")
-                                : "No songs yet"
-                            }
-                        </p>
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
-                            <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-black font-bold">
-                                U
-                            </div>
-                            <span className="hover:underline cursor-pointer text-white">User</span>
-                            <span>•</span>
-                            <span>{playlist.tracks.length} songs</span>
+                        {/* Search in Playlist */}
+                        <div className="relative ml-4 hidden md:block group">
+                            <SearchBar onSearch={setSearchQuery} live />
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 bg-[#050505]">
-                {/* Action Bar */}
-                <div className="flex items-center justify-between py-6 flex-col md:flex-row gap-4 md:gap-0">
-                    <div className="flex items-center gap-8">
-                        <button
-                            onClick={handlePlayAll}
-                            disabled={playlist.tracks.length === 0}
-                            className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed"
-                        >
-                            {isPlaying && currentTrack && playlist.tracks.some(t => t.id === currentTrack.id) ? (
-                                <PauseIcon className="w-6 h-6 fill-black" />
-                            ) : (
-                                <Play className="w-6 h-6 fill-black ml-1" />
-                            )}
-                        </button>
+                    <div className="flex items-center gap-6">
                         <button className="text-gray-400 hover:text-white transition-colors">
-                            <MoreHorizontal className="w-8 h-8" />
+                            <Bell className="w-5 h-5" />
                         </button>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center cursor-pointer hover:scale-105 transition-transform">
+                            <User className="w-4 h-4 text-white" />
+                        </div>
                     </div>
-                    <button
-                        onClick={handleDelete}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-white/5 rounded-full"
-                        title="Delete Playlist"
-                    >
-                        <Trash2 className="w-5 h-5" />
-                    </button>
-                </div>
+                </header>
 
-                {/* Tracks List Header */}
-                <div className="grid grid-cols-[16px_4fr_minmax(80px,1fr)] md:grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium sticky top-20 bg-[#050505] z-20">
-                    <div className="text-center">#</div>
-                    <div>Title</div>
-                    <div className="hidden md:block">Album</div>
-                    <div className="text-right flex items-center justify-end gap-2">
-                        <Clock className="w-4 h-4" />
-                    </div>
-                </div>
+                <div className="flex-1 flex md:p-2 gap-3 overflow-hidden">
+                    {/* Main Content Scrollable */}
+                    <div className="flex-1 overflow-scroll relative no-scrollbar">
+                        {/* Gradient Background */}
+                        <div className="absolute inset-x-0 top-0 h-full  rounded-lg bg-white/10 border-white/10 border   bg-gradient-to-b from-primary/30 via-[#050505]/80 to-[#050505] pointer-events-none" />
 
-                {/* Tracks List */}
-                <div className="mt-4 space-y-2">
-                    {playlist.tracks.map((track, index) => (
-                        <div
-                            key={`${track.id}-${index}`}
-                            onClick={() => playTrack(track)}
-                            className="group grid grid-cols-[16px_4fr_minmax(80px,1fr)] md:grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
-                        >
-                            <div className="text-sm text-gray-400 text-center group-hover:hidden">
-                                {index + 1}
-                            </div>
-                            <div className="hidden group-hover:flex justify-center text-white">
-                                <Play className="w-4 h-4 fill-white" />
-                            </div>
+                        <div className="relative z-10 px-8 py-6 overflow-scroll h-screen  pb-20">
+                            {/* Playlist Header */}
+                            <div className="flex flex-col  md:flex-row  items-end gap-8 mb-8 pt-4">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="w-52 h-52 md:w-52 md:h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-lg bg-[#282828] shrink-0 flex items-center justify-center overflow-hidden group relative"
+                                >
+                                    {playlist.tracks.length > 0 ? (
+                                        <img
+                                            src={getArtworkUrl(playlist.tracks[0].attributes.artwork.url, 600)}
+                                            alt={playlist.name}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                    ) : (
+                                        <Music className="w-20 h-20 text-gray-600" />
+                                    )}
+                                </motion.div>
 
-                            <div className="flex items-center gap-4 min-w-0">
-                                <img
-                                    src={getArtworkUrl(track.attributes.artwork.url, 100)}
-                                    alt={track.attributes.name}
-                                    className="w-10 h-10 rounded shadow-sm object-cover"
-                                />
-                                <div className="min-w-0">
-                                    <div className={`text-base font-medium truncate ${currentTrack?.id === track.id ? 'text-emerald-500' : 'text-white'}`}>
-                                        {track.attributes.name}
-                                    </div>
-                                    <div className="text-sm text-gray-400 truncate group-hover:text-white transition-colors">
-                                        {track.attributes.artistName}
+                                <div className="flex flex-col gap-1 md:gap-4 flex-1 min-w-0">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-white">Public Playlist</span>
+
+                                    {isEditing ? (
+                                        <div className="flex items-center">
+                                            <input
+                                                type="text"
+                                                value={editName}
+                                                onChange={(e) => setEditName(e.target.value)}
+                                                className="bg-transparent border-b border-white text-4xl md:text-5xl font-black text-white w-full outline-none"
+                                                autoFocus
+                                                onBlur={handleRename}
+                                                onKeyDown={(e) => e.key === "Enter" && handleRename()}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <h1
+                                            className="text-4xl md:text-6xl font-black tracking-tighter text-white truncate cursor-pointer hover:opacity-90 transition-opacity"
+                                            onClick={() => setIsEditing(true)}
+                                        >
+                                            {playlist.name}
+                                        </h1>
+                                    )}
+
+
+                                    <div className="flex items-center gap-2 text-sm font-medium mt-2 text-white">
+                                        <span className="text-gray-400">•</span>
+                                        <span className="text-gray-300">{playlist.tracks.length} songs, </span>
+                                        <span className="text-gray-400">about 1 hr 45 min</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="hidden md:flex text-sm text-gray-400 truncate items-center group-hover:text-white transition-colors">
-                                {track.attributes.albumName}
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-4  backdrop-blur-sm sticky top-0 py-4 -mx-8 px-8 z-30 transition-all">
+                                <button
+                                    onClick={handlePlayAll}
+                                    className="w-10 h-10 rounded-full bg-primary hover:bg-accent text-black flex items-center justify-center hover:scale-105 transition-all shadow-lg active:scale-95"
+                                >
+                                    {isPlaying && currentTrack && playlist.tracks.some(t => t.id === currentTrack.id) ? (
+                                        <PauseIcon className="w-5 h-5 fill-black" />
+                                    ) : (
+                                        <Play className="w-5 h-5 fill-black ml-1" />
+                                    )}
+                                </button>
+                                <button className="text-gray-400 hover:text-white transition-colors hover:scale-105">
+                                    <Heart className="w-8 h-8" />
+                                </button>
+                                <button className="text-gray-400 hover:text-white transition-colors hover:scale-105">
+                                    <Download className="w-8 h-8" />
+                                </button>
+                                <div className="flex-1" />
+                                <div className="flex gap-4">
+                                    <button className="text-gray-400 hover:text-white transition-colors">
+                                        <span className="text-sm font-semibold tracking-wide">List</span>
+                                    </button>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="text-gray-400 hover:text-red-500 transition-colors"
+                                        title="Delete Playlist"
+                                    >
+                                        <MoreHorizontal className="w-6 h-6" />
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-end gap-8">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
-                                    className={`${isLiked(track.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} hover:scale-110 transition-all`}
-                                >
-                                    <Heart className={`w-4 h-4 ${isLiked(track.id) ? 'text-emerald-500 fill-emerald-500' : 'text-white'}`} />
-                                </button>
-                                <span className="text-sm text-gray-400 tabular-nums">
-                                    {formatDuration(track.attributes.durationInMillis)}
-                                </span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeFromPlaylist(playlist.id, track.id);
-                                    }}
-                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-colors"
-                                    title="Remove from playlist"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                            {/* Tracklist Header */}
+                            <div className="grid grid-cols-[16px_4fr_2fr_2fr_minmax(60px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium tracking-wide uppercase">
+                                <div className="text-center text-base">#</div>
+                                <div>Title</div>
+                                <div className="hidden md:block">Album</div>
+                                <div className="hidden lg:block">Date Added</div>
+                                <div className="text-right flex justify-end">
+                                    <Clock className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                            {/* Tracklist Items */}
+                            <div className="mt-4   flex flex-col">
+                                {filteredTracks.length > 0 ? filteredTracks.map((track, index) => (
+                                    <div
+                                        key={`${track.id}-${index}`}
+                                        onClick={() => playTrack(track)}
+                                        className="group grid grid-cols-[16px_4fr_2fr_2fr_minmax(60px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
+                                    >
+                                        <div className="text-sm text-gray-400 text-center w-4 tabular-nums relative">
+                                            <span className="group-hover:hidden">{index + 1}</span>
+                                            <Play className="w-3 h-3 text-white fill-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden group-hover:block" />
+                                        </div>
+
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <img
+                                                src={getArtworkUrl(track.attributes.artwork.url, 100)}
+                                                alt={track.attributes.name}
+                                                className="w-10 h-10 rounded shadow-sm object-cover"
+                                            />
+                                            <div className="min-w-0 flex flex-col">
+                                                <div className={`text-base font-medium truncate ${currentTrack?.id === track.id ? 'text-primary' : 'text-white'}`}>
+                                                    {track.attributes.name}
+                                                </div>
+                                                <div className="text-sm text-gray-400 truncate group-hover:text-white transition-colors">
+                                                    {track.attributes.artistName}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="hidden md:flex text-sm text-gray-400 truncate items-center group-hover:text-white transition-colors">
+                                            {track.attributes.albumName || "Unknown Album"}
+                                        </div>
+
+                                        <div className="hidden lg:flex text-sm text-gray-400 truncate items-center">
+                                            2 days ago
+                                        </div>
+
+                                        <div className="flex items-center justify-end gap-6">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
+                                                className={`opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 ${isLiked(track.id) ? 'text-primary fill-primary opacity-100' : 'text-white'}`}
+                                            >
+                                                <Heart className={`w-4 h-4 ${isLiked(track.id) ? 'fill-primary' : ''}`} />
+                                            </button>
+                                            <span className="text-sm text-gray-400 tabular-nums">
+                                                {formatDuration(track.attributes.durationInMillis)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="text-center py-20 text-gray-500">
+                                        <p>No songs found in this playlist.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    ))}
+                    </div>
 
-                    {playlist.tracks.length === 0 && (
-                        <div className="text-center py-20 text-gray-500">
-                            <Music className="w-16 h-16 mx-auto mb-4 text-gray-700" />
-                            <p className="text-lg font-medium text-white">This playlist is empty</p>
-                            <p className="text-sm mb-6">Search for songs to add them to this playlist.</p>
-                            <button
-                                onClick={() => navigate("/search")}
-                                className="px-8 py-3 rounded-full bg-white text-black font-bold hover:scale-105 transition-transform"
-                            >
-                                Find Songs
-                            </button>
-                        </div>
-                    )}
+                    {/* Right Sidebar - Up Next */}
+                    <div className="hidden xl:block w-[350px] shrink-0 border-l border-white/5 bg-[#050505]">
+                        <UpNext />
+                    </div>
                 </div>
             </div>
         </div>

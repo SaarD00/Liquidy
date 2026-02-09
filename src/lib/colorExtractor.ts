@@ -3,6 +3,11 @@ export async function extractColorsFromImage(imageUrl: string): Promise<{
     primary: string;
     secondary: string;
     accent: string;
+    raw?: {
+        primary: { r: number, g: number, b: number };
+        secondary: { r: number, g: number, b: number };
+        accent: { r: number, g: number, b: number };
+    };
 }> {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -56,7 +61,12 @@ export async function extractColorsFromImage(imageUrl: string): Promise<{
                 resolve({
                     primary: `rgba(${primary.r}, ${primary.g}, ${primary.b}, 0.4)`,
                     secondary: `rgba(${secondary.r}, ${secondary.g}, ${secondary.b}, 0.35)`,
-                    accent: `rgba(${accent.r}, ${accent.g}, ${accent.b}, 0.25)`
+                    accent: `rgba(${accent.r}, ${accent.g}, ${accent.b}, 0.25)`,
+                    raw: {
+                        primary,
+                        secondary,
+                        accent
+                    }
                 });
             } catch (error) {
                 resolve(getDefaultColors());
@@ -121,6 +131,11 @@ function getDefaultColors() {
     return {
         primary: 'rgba(139, 92, 246, 0.4)',
         secondary: 'rgba(236, 72, 153, 0.35)',
-        accent: 'rgba(6, 182, 212, 0.25)'
+        accent: 'rgba(6, 182, 212, 0.25)',
+        raw: {
+            primary: { r: 139, g: 92, b: 246 },
+            secondary: { r: 236, g: 72, b: 153 },
+            accent: { r: 6, g: 182, b: 212 }
+        }
     };
 }

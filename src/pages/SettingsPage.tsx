@@ -14,7 +14,7 @@ export default function SettingsPage() {
 
       <div className="max-w-4xl mx-auto px-4 pt-8 md:pt-12">
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-          <Settings className="w-8 h-8 text-emerald-500" />
+          <Settings className="w-8 h-8 text-primary" />
           Settings
         </h1>
 
@@ -26,7 +26,7 @@ export default function SettingsPage() {
               {/* Dynamic Background */}
               <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                 <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
                     <Sparkles className="w-5 h-5" />
                   </div>
                   <div>
@@ -129,7 +129,7 @@ function Toggle({ checked, onChange }: { checked: boolean, onChange: () => void 
   return (
     <button
       onClick={onChange}
-      className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-emerald-500' : 'bg-white/20'}`}
+      className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-white/20'}`}
     >
       <div
         className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-7' : 'translate-x-1'}`}

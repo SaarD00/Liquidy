@@ -41,7 +41,7 @@ export default function DesktopSidebar() {
                 : "text-gray-300 hover:text-white"
                 }`}
             >
-              <Icon className={`w-5 h-5 ${active ? 'text-emerald-400' : ''}`} />
+              <Icon className={`w-5 h-5 ${active ? 'text-primary' : ''}`} />
               <span className="font-medium">{label}</span>
             </button>
           );
@@ -87,7 +87,7 @@ export default function DesktopSidebar() {
             className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-all ${location.pathname === "/favorites" ? "bg-white/5" : ""
               }`}
           >
-            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center shadow-lg">
+            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
               <Heart className="w-5 h-5 text-white fill-white" />
             </div>
             <div className="flex-1 min-w-0 text-left">

@@ -67,7 +67,7 @@ export default function HomePage() {
   const upNextTracks = queue.slice(1, 7);
 
   return (
-    <div className="min-h-screen w-full bg-[#050505] text-white overflow-hidden flex flex-col antialiased selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen w-full bg-[#050505] text-white overflow-hidden flex flex-col antialiased selection:bg-primary selection:text-black">
 
       {/* Header */}
       <header className="h-20 flex items-center justify-between px-4 md:px-8 z-30 relative pl-0 md:pl-80">
@@ -84,13 +84,13 @@ export default function HomePage() {
         </div> */}
 
         {/* Center - Search Bar */}
-        <div className="flex-1 max-w-xl ml-0 md:ml-96 mx-4 md:mx-8">
+        <div className="flex-1 max-w-xl ml-24 mx-4 md:mx-8">
           <SearchBar onSearch={handleSearch} isLoading={loading} />
         </div>
 
         {/* Right - Actions */}
         <div className="flex items-center gap-6">
-          <button className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors hidden md:block">
+          <button className="text-sm font-semibold text-primary hover:text-accent transition-colors hidden md:block">
             Upgrade
           </button>
           <button className="text-gray-400 hover:text-white transition-colors">
@@ -99,7 +99,7 @@ export default function HomePage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="w-9 h-9 rounded-full glass-panel overflow-hidden cursor-pointer hover:border-white/30 transition-all p-0.5">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                   <User className="w-5 h-5 text-white/80" />
                 </div>
               </div>
@@ -134,7 +134,7 @@ export default function HomePage() {
         {/* Center Content */}
         <section className="flex-1 glass-panel rounded-2xl flex flex-col relative overflow-hidden">
           {/* Emerald Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/10 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
 
           <div className="flex-1 overflow-y-auto p-8 relative z-10">
             {/* Greeting */}
@@ -152,11 +152,11 @@ export default function HomePage() {
                     onClick={() => handleQuickPick(pick.query)}
                     className="group flex items-center bg-white/5 hover:bg-white/10 rounded-xl overflow-hidden transition-all border border-white/5 cursor-pointer"
                   >
-                    <div className="w-20 h-20 bg-gradient-to-br from-emerald-600/40 to-teal-800/40 flex items-center justify-center">
-                      <Music2 className="w-8 h-8 text-emerald-400" />
+                    <div className="w-20 h-20 bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center">
+                      <Music2 className="w-8 h-8 text-primary" />
                     </div>
                     <span className="ml-4 font-bold text-white text-sm">{pick.name}</span>
-                    <div className="ml-auto mr-4 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                    <div className="ml-auto mr-4 w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
                       <Play className="w-5 h-5 text-black fill-black" />
                     </div>
                   </motion.div>
@@ -226,7 +226,7 @@ export default function HomePage() {
                       <button
                         key={pick.name}
                         onClick={() => handleQuickPick(pick.query)}
-                        className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white hover:bg-emerald-500 hover:text-black transition-all"
+                        className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white hover:bg-primary hover:text-black transition-all"
                       >
                         {pick.name}
                       </button>
@@ -238,7 +238,7 @@ export default function HomePage() {
               {/* Loading State */}
               {loading && (
                 <div className="flex justify-center py-20">
-                  <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -278,7 +278,7 @@ export default function HomePage() {
                         {[...Array(3)].map((_, i) => (
                           <motion.div
                             key={i}
-                            className="w-0.5 bg-emerald-400 rounded-full"
+                            className="w-0.5 bg-primary rounded-full"
                             animate={isPlaying ? { height: ["30%", "100%", "30%"] } : { height: "30%" }}
                             transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.15 }}
                           />
@@ -287,10 +287,10 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-emerald-400 truncate">{currentTrack.attributes.name}</h4>
+                    <h4 className="text-xs font-bold text-primary truncate">{currentTrack.attributes.name}</h4>
                     <p className="text-[10px] text-soft truncate">{currentTrack.attributes.artistName}</p>
                   </div>
-                  <span className="text-[10px] text-emerald-400 font-medium">Playing</span>
+                  <span className="text-[10px] text-primary font-medium">Playing</span>
                 </div>
               )}
 
@@ -308,7 +308,7 @@ export default function HomePage() {
                     src={getArtworkUrl(track.attributes.artwork.url, 100)}
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition-colors">
+                    <h4 className="text-xs font-bold text-white truncate group-hover:text-primary transition-colors">
                       {track.attributes.name}
                     </h4>
                     <p className="text-[10px] text-soft truncate">{track.attributes.artistName}</p>

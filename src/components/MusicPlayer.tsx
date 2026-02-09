@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, SkipBack, SkipForward, Heart, ChevronDown, MoreHorizontal, Shuffle, Repeat, Volume2, Mic2, ListMusic, Maximize2, ListPlus } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useSettings } from "@/contexts/SettingsContext";
+import { extractColorsFromImage } from "@/lib/colorExtractor";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +26,9 @@ export default function MusicPlayer() {
     seekTo, nextTrack, prevTrack, coverArtUrl, isYouTube, videoId
   } = usePlayer();
   const { isLiked, toggleLike, playlists, addToPlaylist } = useFavorites();
+  const { setCustomTheme, resetTheme } = useTheme();
+  const { dynamicBackground } = useSettings();
+
   const [expanded, setExpanded] = useState(false);
   const [volume, setVolume] = useState(80);
 
@@ -35,6 +41,24 @@ export default function MusicPlayer() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isYouTubeVideo = currentTrack ? isYouTubeTrack(currentTrack) : false;
+
+  // Dynamic Theme Extraction
+  useEffect(() => {
+    if (dynamicBackground && currentTrack?.attributes?.artwork?.url) {
+      extractColorsFromImage(currentTrack.attributes.artwork.url)
+        .then(colors => {
+          if (colors.raw) {
+            setCustomTheme(colors.raw.primary);
+          }
+        });
+    } else {
+      // If dynamic background is off, or no track, likely want to reset or keep default
+      if (!dynamicBackground) {
+        resetTheme();
+      }
+    }
+  }, [currentTrack, dynamicBackground, setCustomTheme, resetTheme]);
+
 
   // Reset when video changes
   useEffect(() => {
@@ -162,8 +186,8 @@ export default function MusicPlayer() {
           >
             {/* Background Gradient */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px]" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[100px]" />
+              <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[100px]" />
             </div>
 
             {/* Content */}
@@ -219,10 +243,10 @@ export default function MusicPlayer() {
               <div className="flex items-end justify-between mb-8">
                 <div className="flex-1 min-w-0">
                   <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 truncate">{String(name).slice(0, 32)}</h2>
-                  <p className="text-lg text-emerald-200/70 truncate">{artistName}</p>
+                  <p className="text-lg text-primary/70 truncate">{artistName}</p>
                 </div>
                 <button onClick={() => toggleLike(currentTrack)} className="mb-2 ml-4 flex-shrink-0">
-                  <Heart className={`w-7 h-7 ${liked ? 'fill-emerald-500 text-emerald-500' : 'text-white/50 hover:text-white'}`} />
+                  <Heart className={`w-7 h-7 ${liked ? 'fill-primary text-primary' : 'text-white/50 hover:text-white'}`} />
                 </button>
               </div>
 
@@ -233,7 +257,7 @@ export default function MusicPlayer() {
                   onClick={handleProgressClick}
                 >
                   <div
-                    className="absolute top-0 left-0 h-full rounded-full bg-emerald-500 progress-glow"
+                    className="absolute top-0 left-0 h-full rounded-full bg-primary progress-glow"
                     style={{ width: `${progress}%` }}
                   />
                   <div
@@ -250,7 +274,7 @@ export default function MusicPlayer() {
               {/* Main Controls */}
               <div className="flex items-center justify-center gap-8 mb-8">
                 <Shuffle className="w-5 h-5 text-gray-500 hover:text-white transition-colors cursor-pointer" />
-                <SkipBack onClick={prevTrack} className="w-8 h-8 text-white hover:text-emerald-400 transition-colors cursor-pointer" fill="currentColor" />
+                <SkipBack onClick={prevTrack} className="w-8 h-8 text-white hover:text-primary transition-colors cursor-pointer" fill="currentColor" />
                 <button
                   onClick={togglePlay}
                   className="w-20 h-20 rounded-full liquid-accent flex items-center justify-center hover:scale-105 transition-transform"
@@ -261,7 +285,7 @@ export default function MusicPlayer() {
                     <Play className="w-8 h-8 text-black fill-black ml-1" />
                   )}
                 </button>
-                <SkipForward onClick={nextTrack} className="w-8 h-8 text-white hover:text-emerald-400 transition-colors cursor-pointer" fill="currentColor" />
+                <SkipForward onClick={nextTrack} className="w-8 h-8 text-white hover:text-primary transition-colors cursor-pointer" fill="currentColor" />
                 <Repeat className="w-5 h-5 text-gray-500 hover:text-white transition-colors cursor-pointer" />
               </div>
             </div>
@@ -285,7 +309,7 @@ export default function MusicPlayer() {
             </button>
           </div>
           <div className="flex flex-col min-w-0">
-            <h4 className="text-sm font-semibold text-white hover:text-emerald-400 cursor-pointer transition-colors truncate">
+            <h4 className="text-sm font-semibold text-white hover:text-primary cursor-pointer transition-colors truncate">
               {String(name).slice(0, 25)}
             </h4>
             <p className="text-[11px] text-soft hover:text-white cursor-pointer transition-colors truncate">
@@ -294,9 +318,9 @@ export default function MusicPlayer() {
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); toggleLike(currentTrack); }}
-            className="text-emerald-500 ml-2 hover:scale-110 transition-transform"
+            className="text-primary ml-2 hover:scale-110 transition-transform"
           >
-            <Heart className={`w-4 h-4 ${liked ? 'fill-emerald-500' : ''}`} />
+            <Heart className={`w-4 h-4 ${liked ? 'fill-primary' : ''}`} />
           </button>
         </div>
 
@@ -342,7 +366,7 @@ export default function MusicPlayer() {
               onClick={(e) => { e.stopPropagation(); handleProgressClick(e); }}
             >
               <div
-                className="absolute top-0 left-0 h-full bg-emerald-500 rounded-full progress-glow group-hover:bg-emerald-400 transition-all"
+                className="absolute top-0 left-0 h-full bg-primary rounded-full progress-glow group-hover:bg-accent transition-all"
                 style={{ width: `${progress}%` }}
               />
               <div
@@ -356,14 +380,14 @@ export default function MusicPlayer() {
 
         {/* Right: Volume & Extras */}
         <div className="flex items-center justify-end gap-5 w-[30%] text-gray-400">
-          <button className="hover:text-emerald-400 transition-colors hidden md:block">
+          <button className="hover:text-primary transition-colors hidden md:block">
             <Mic2 className="w-5 h-5" />
           </button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="hover:text-emerald-400 transition-colors hidden md:block"
+                className="hover:text-primary transition-colors hidden md:block"
                 title="Add to Playlist"
               >
                 <ListPlus className="w-5 h-5" />
@@ -398,7 +422,7 @@ export default function MusicPlayer() {
             <Volume2 className="w-5 h-5 group-hover:text-white" />
             <div className="flex-1 h-1 bg-white/10 rounded-full cursor-pointer relative">
               <div
-                className="absolute top-0 left-0 h-full bg-gray-400 group-hover:bg-emerald-500 rounded-full transition-all"
+                className="absolute top-0 left-0 h-full bg-gray-400 group-hover:bg-primary rounded-full transition-all"
                 style={{ width: `${volume}%` }}
               />
               <input

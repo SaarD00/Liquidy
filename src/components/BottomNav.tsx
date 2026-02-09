@@ -30,7 +30,7 @@ export default function BottomNav() {
                   layoutId="nav-indicator-mobile"
                   className="absolute -top-1 w-8 h-1 rounded-full"
                   style={{
-                    background: 'linear-gradient(90deg, hsl(280 80% 60%), hsl(320 80% 55%))'
+                    background: 'linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)))'
                   }}
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
