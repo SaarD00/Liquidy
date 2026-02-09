@@ -1,11 +1,11 @@
-import { Home, Search, ListMusic, Heart, Settings } from "lucide-react";
+import { Home, Search, Library, Heart, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
   { icon: Search, label: "Search", path: "/search" },
-  { icon: ListMusic, label: "Library", path: "/library" },
+  { icon: Library, label: "Library", path: "/library" },
   { icon: Heart, label: "Favorites", path: "/favorites" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
@@ -16,19 +16,22 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      <div className="glass-strong rounded-t-3xl flex items-center justify-around px-2 py-3">
+      <div className="glass-strong rounded-t-2xl flex items-center justify-around px-2 py-2 mx-2 mb-0">
         {navItems.map(({ icon: Icon, label, path }) => {
           const active = location.pathname === path;
           return (
             <button
               key={path}
               onClick={() => navigate(path)}
-              className="flex flex-col items-center gap-1 py-1 px-3 relative"
+              className="flex flex-col items-center gap-1 py-2 px-4 relative"
             >
               {active && (
                 <motion.div
-                  layoutId="nav-indicator"
-                  className="absolute -top-1 w-10 h-1 bg-primary rounded-full glow-primary"
+                  layoutId="nav-indicator-mobile"
+                  className="absolute -top-1 w-8 h-1 rounded-full"
+                  style={{
+                    background: 'linear-gradient(90deg, hsl(280 80% 60%), hsl(320 80% 55%))'
+                  }}
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}

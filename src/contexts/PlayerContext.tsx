@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
-import { SearchTrack, getTrackDetails, getArtworkUrl } from "@/lib/api";
+import { SearchTrack, getTrackDetails, getArtworkUrl, isYouTubeTrack } from "@/lib/api";
 
 interface PlayerState {
   currentTrack: SearchTrack | null;
@@ -8,6 +8,8 @@ interface PlayerState {
   duration: number;
   audioUrl: string | null;
   queue: SearchTrack[];
+  isYouTube: boolean;
+  videoId: string | null;
 }
 
 interface PlayerContextType extends PlayerState {
@@ -30,6 +32,7 @@ export function usePlayer() {
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const [state, setState] = useState<PlayerState>({
     currentTrack: null,
     isPlaying: false,
@@ -37,8 +40,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     duration: 0,
     audioUrl: null,
     queue: [],
+    isYouTube: false,
+    videoId: null,
   });
 
+  // Initialize audio element for Shazam tracks
   useEffect(() => {
     audioRef.current = new Audio();
     const audio = audioRef.current;
@@ -61,6 +67,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   const playTrack = useCallback(async (track: SearchTrack) => {
     const audio = audioRef.current;
+
+    // Check if it's a YouTube track
+    if (isYouTubeTrack(track)) {
+      // Stop any playing audio
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+
+      setState((s) => ({
+        ...s,
+        currentTrack: track,
+        isPlaying: true,
+        isYouTube: true,
+        videoId: track.videoId || track.id,
+        audioUrl: null,
+        currentTime: 0,
+        duration: 0,
+      }));
+
+      return;
+    }
+
+    // Handle Shazam tracks with audio preview
     if (!audio) return;
 
     // Try preview URL from search results first
@@ -86,28 +116,42 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         isPlaying: true,
         audioUrl: url,
         currentTime: 0,
+        isYouTube: false,
+        videoId: null,
       }));
     }
   }, []);
 
   const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !state.audioUrl) return;
-    if (state.isPlaying) {
-      audio.pause();
+    if (state.isYouTube) {
+      // For YouTube, just toggle the state
+      // The MusicPlayer component will handle syncing with the iframe
+      setState((s) => ({ ...s, isPlaying: !s.isPlaying }));
     } else {
-      audio.play();
+      // Toggle audio player
+      const audio = audioRef.current;
+      if (!audio || !state.audioUrl) return;
+      if (state.isPlaying) {
+        audio.pause();
+      } else {
+        audio.play();
+      }
+      setState((s) => ({ ...s, isPlaying: !s.isPlaying }));
     }
-    setState((s) => ({ ...s, isPlaying: !s.isPlaying }));
-  }, [state.isPlaying, state.audioUrl]);
+  }, [state.isPlaying, state.audioUrl, state.isYouTube]);
 
   const seekTo = useCallback((time: number) => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.currentTime = time;
+    if (state.isYouTube) {
+      // For YouTube, just update the state - MusicPlayer handles iframe
       setState((s) => ({ ...s, currentTime: time }));
+    } else {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = time;
+        setState((s) => ({ ...s, currentTime: time }));
+      }
     }
-  }, []);
+  }, [state.isYouTube]);
 
   const nextTrack = useCallback(() => {
     if (state.queue.length === 0 || !state.currentTrack) return;
@@ -133,7 +177,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <PlayerContext.Provider
-      value={{ ...state, playTrack, togglePlay, seekTo, nextTrack, prevTrack, addToQueue, coverArtUrl }}
+      value={{
+        ...state,
+        playTrack,
+        togglePlay,
+        seekTo,
+        nextTrack,
+        prevTrack,
+        addToQueue,
+        coverArtUrl,
+      }}
     >
       {children}
     </PlayerContext.Provider>
