@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect, MutableRefObject } from "react";
 import { SearchTrack, getTrackDetails, getArtworkUrl, isYouTubeTrack } from "@/lib/api";
 
 interface PlayerState {
@@ -20,6 +20,9 @@ interface PlayerContextType extends PlayerState {
   prevTrack: () => void;
   addToQueue: (tracks: SearchTrack[]) => void;
   coverArtUrl: string | null;
+  youtubePlayerRef: MutableRefObject<HTMLIFrameElement | null>;
+  onYouTubeStateChange: (state: number) => void;
+  onYouTubeTimeUpdate: (currentTime: number, duration: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
@@ -32,6 +35,7 @@ export function usePlayer() {
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const youtubePlayerRef = useRef<HTMLIFrameElement | null>(null);
 
   const [state, setState] = useState<PlayerState>({
     currentTrack: null,
@@ -171,6 +175,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, queue: tracks }));
   }, []);
 
+  // YouTube state change handler (state codes: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering)
+  const onYouTubeStateChange = useCallback((playerState: number) => {
+    if (playerState === 1) {
+      setState((s) => ({ ...s, isPlaying: true }));
+    } else if (playerState === 2 || playerState === 0) {
+      setState((s) => ({ ...s, isPlaying: false }));
+    }
+  }, []);
+
+  // YouTube time update handler
+  const onYouTubeTimeUpdate = useCallback((currentTime: number, duration: number) => {
+    setState((s) => ({ ...s, currentTime, duration }));
+  }, []);
+
   const coverArtUrl = state.currentTrack
     ? getArtworkUrl(state.currentTrack.attributes.artwork.url, 600)
     : null;
@@ -186,6 +204,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         prevTrack,
         addToQueue,
         coverArtUrl,
+        youtubePlayerRef,
+        onYouTubeStateChange,
+        onYouTubeTimeUpdate,
       }}
     >
       {children}
