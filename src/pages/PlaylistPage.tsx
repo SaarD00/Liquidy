@@ -70,15 +70,15 @@ export default function PlaylistPage() {
             <DesktopSidebar />
 
             {/* Header Section */}
-            <div className="relative h-80 flex items-end p-8 pb-6 bg-gradient-to-b from-indigo-900/50 via-[#050505] to-[#050505]">
+            <div className="relative h-auto md:h-80 flex items-end p-4 md:p-8 pb-6 bg-gradient-to-b from-indigo-900/50 via-[#050505] to-[#050505]">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050505]" />
 
-                <div className="relative z-10 flex items-end gap-6 w-full max-w-7xl mx-auto">
+                <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6 w-full max-w-7xl mx-auto pt-20 md:pt-0">
                     {/* Cover Art Placeholder */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="w-52 h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-md bg-white/10 flex items-center justify-center shrink-0 border border-white/5"
+                        className="w-40 h-40 md:w-52 md:h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-md bg-white/10 flex items-center justify-center shrink-0 border border-white/5"
                     >
                         {playlist.tracks.length > 0 ? (
                             <img
@@ -87,33 +87,33 @@ export default function PlaylistPage() {
                                 className="w-full h-full object-cover rounded-md"
                             />
                         ) : (
-                            <Music className="w-20 h-20 text-gray-500" />
+                            <Music className="w-16 h-16 md:w-20 md:h-20 text-gray-500" />
                         )}
                     </motion.div>
 
                     {/* Playlist Info */}
-                    <div className="flex flex-col gap-2 mb-2 flex-1 min-w-0">
-                        <span className="text-sm font-bold uppercase tracking-wider">Public Playlist</span>
+                    <div className="flex flex-col gap-2 mb-2 flex-1 min-w-0 text-center md:text-left items-center md:items-start">
+                        <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Public Playlist</span>
 
                         {isEditing ? (
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-2 w-full justify-center md:justify-start">
                                 <input
                                     type="text"
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className="bg-white/10 border border-white/20 text-3xl md:text-5xl font-black text-white px-4 py-2 rounded-lg w-full focus:outline-none focus:border-emerald-500"
+                                    className="bg-white/10 border border-white/20 text-3xl md:text-5xl font-black text-white px-4 py-2 rounded-lg w-full max-w-md focus:outline-none focus:border-emerald-500 text-center md:text-left"
                                     autoFocus
                                     onKeyDown={(e) => e.key === "Enter" && handleRename()}
                                 />
-                                <button onClick={handleRename} className="p-2 hover:bg-emerald-500/20 rounded-full text-emerald-500">
+                                <button onClick={handleRename} className="p-2 hover:bg-emerald-500/20 rounded-full text-emerald-500 shrink-0">
                                     <Check className="w-8 h-8" />
                                 </button>
-                                <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-red-500/20 rounded-full text-red-500">
+                                <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-red-500/20 rounded-full text-red-500 shrink-0">
                                     <X className="w-8 h-8" />
                                 </button>
                             </div>
                         ) : (
-                            <div className="group flex items-center gap-4 mb-2">
+                            <div className="group flex items-center justify-center md:justify-start gap-4 mb-2">
                                 <h1
                                     className="text-4xl md:text-7xl font-black tracking-tight text-white truncate cursor-pointer hover:underline decoration-emerald-500/50"
                                     onClick={() => setIsEditing(true)}
@@ -122,7 +122,7 @@ export default function PlaylistPage() {
                                 </h1>
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/10 rounded-full"
+                                    className="opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/10 rounded-full"
                                 >
                                     <Pencil className="w-5 h-5 text-gray-400" />
                                 </button>
@@ -148,9 +148,9 @@ export default function PlaylistPage() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-8 relative z-10 bg-[#050505]">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 bg-[#050505]">
                 {/* Action Bar */}
-                <div className="flex items-center justify-between py-6">
+                <div className="flex items-center justify-between py-6 flex-col md:flex-row gap-4 md:gap-0">
                     <div className="flex items-center gap-8">
                         <button
                             onClick={handlePlayAll}
@@ -177,7 +177,7 @@ export default function PlaylistPage() {
                 </div>
 
                 {/* Tracks List Header */}
-                <div className="grid grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium sticky top-20 bg-[#050505] z-20">
+                <div className="grid grid-cols-[16px_4fr_minmax(80px,1fr)] md:grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium sticky top-20 bg-[#050505] z-20">
                     <div className="text-center">#</div>
                     <div>Title</div>
                     <div className="hidden md:block">Album</div>
@@ -192,7 +192,7 @@ export default function PlaylistPage() {
                         <div
                             key={`${track.id}-${index}`}
                             onClick={() => playTrack(track)}
-                            className="group grid grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
+                            className="group grid grid-cols-[16px_4fr_minmax(80px,1fr)] md:grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
                         >
                             <div className="text-sm text-gray-400 text-center group-hover:hidden">
                                 {index + 1}

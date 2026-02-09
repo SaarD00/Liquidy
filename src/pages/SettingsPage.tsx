@@ -2,14 +2,17 @@ import { motion } from "framer-motion";
 import { Settings, Sparkles, Monitor, Brush, Volume2, Shield, Bell, ChevronRight, Check } from "lucide-react";
 import { useTheme, colorThemes } from "@/contexts/ThemeContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import DesktopSidebar from "@/components/DesktopSidebar";
 
 export default function SettingsPage() {
   const { colorTheme, setColorTheme } = useTheme();
   const { dynamicBackground, setDynamicBackground } = useSettings();
 
   return (
-    <div className="min-h-screen pb-32 pl-4 pr-8 md:pl-8 pt-8 bg-[#050505] text-white">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen pb-32 bg-[#050505] text-white md:pl-80 transition-all duration-300">
+      <DesktopSidebar />
+
+      <div className="max-w-4xl mx-auto px-4 pt-8 md:pt-12">
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
           <Settings className="w-8 h-8 text-emerald-500" />
           Settings

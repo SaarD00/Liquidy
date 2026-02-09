@@ -270,7 +270,7 @@ export default function MusicPlayer() {
       </AnimatePresence>
 
       {/* Floating Now Playing Bar */}
-      <div className="fixed bottom-4 left-4 right-4 h-20 now-playing-bar rounded-2xl flex items-center justify-between px-6 z-50">
+      <div className="fixed bottom-20 md:bottom-4 left-2 right-2 md:left-4 md:right-4 h-16 md:h-20 now-playing-bar rounded-xl md:rounded-2xl flex items-center justify-between px-4 md:px-6 z-50">
 
         {/* Left: Track Info */}
         <div className="flex items-center gap-4 w-[30%]" onClick={() => setExpanded(true)}>

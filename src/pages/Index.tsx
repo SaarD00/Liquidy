@@ -70,7 +70,7 @@ export default function HomePage() {
     <div className="min-h-screen w-full bg-[#050505] text-white overflow-hidden flex flex-col antialiased selection:bg-emerald-500 selection:text-black">
 
       {/* Header */}
-      <header className="h-20 flex items-center justify-between px-8 z-30 relative md:pl-80">
+      <header className="h-20 flex items-center justify-between px-4 md:px-8 z-30 relative pl-0 md:pl-80">
         {/* Left - Navigation Arrows */}
         {/* <div className="flex items-center gap-6">
           <div className="flex gap-4">
@@ -84,7 +84,7 @@ export default function HomePage() {
         </div> */}
 
         {/* Center - Search Bar */}
-        <div className="flex-1 max-w-xl ml-96 mx-8">
+        <div className="flex-1 max-w-xl ml-0 md:ml-96 mx-4 md:mx-8">
           <SearchBar onSearch={handleSearch} isLoading={loading} />
         </div>
 
@@ -129,7 +129,7 @@ export default function HomePage() {
       <DesktopSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex overflow-hidden px-4 pb-28 gap-4 z-10 relative md:pl-80">
+      <main className="flex-1 flex overflow-hidden px-4 pb-28 gap-4 z-10 relative pl-0 md:pl-80">
 
         {/* Center Content */}
         <section className="flex-1 glass-panel rounded-2xl flex flex-col relative overflow-hidden">

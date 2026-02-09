@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { getArtworkUrl, formatDuration } from "@/lib/api";
-import { format } from "date-fns";
+import DesktopSidebar from "@/components/DesktopSidebar";
 
 export default function FavoritesPage() {
   const { likedSongs, toggleLike } = useFavorites();
@@ -11,7 +11,6 @@ export default function FavoritesPage() {
 
   const handlePlayAll = () => {
     if (likedSongs.length > 0) {
-      // If already playing the first song, just toggle
       if (currentTrack?.id === likedSongs[0].id) {
         togglePlay();
       } else {
@@ -22,26 +21,27 @@ export default function FavoritesPage() {
   };
 
   return (
-    <div className="min-h-screen pb-32 w-full bg-[#050505] text-white">
-      {/* Header Section with Gradient Background */}
-      <div className="relative h-80 flex items-end p-8 pb-6 bg-gradient-to-b from-emerald-900/50 via-[#050505] to-[#050505]">
-        {/* Absolute Gradient Overlay */}
+    <div className="min-h-screen pb-32 w-full bg-[#050505] text-white md:pl-80 transition-all duration-300">
+      <DesktopSidebar />
+
+      {/* Header Section */}
+      <div className="relative h-auto md:h-80 flex items-end p-4 md:p-8 pb-6 bg-gradient-to-b from-emerald-900/50 via-[#050505] to-[#050505]">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050505]" />
 
-        <div className="relative z-10 flex items-end gap-6 w-full max-w-7xl mx-auto">
-          {/* Large Cover Art */}
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6 w-full max-w-7xl mx-auto pt-20 md:pt-0">
+          {/* Cover Art */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-52 h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-md bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shrink-0"
+            className="w-40 h-40 md:w-52 md:h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-md bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shrink-0"
           >
-            <Heart className="w-24 h-24 text-white fill-white" />
+            <Heart className="w-16 h-16 md:w-24 md:h-24 text-white fill-white" />
           </motion.div>
 
-          {/* Playlist Info */}
-          <div className="flex flex-col gap-2 mb-2 flex-1">
-            <span className="text-sm font-bold uppercase tracking-wider">Playlist</span>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tight text-white mb-4">Liked Songs</h1>
+          {/* Info */}
+          <div className="flex flex-col gap-2 mb-2 flex-1 text-center md:text-left items-center md:items-start">
+            <span className="text-xs md:text-sm font-bold uppercase tracking-wider">Playlist</span>
+            <h1 className="text-4xl md:text-8xl font-black tracking-tight text-white mb-2 md:mb-4">Liked Songs</h1>
             <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
               <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-black font-bold">
                 U
@@ -55,9 +55,9 @@ export default function FavoritesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-8 relative z-10 bg-[#050505]">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 relative z-10 bg-[#050505]">
         {/* Action Bar */}
-        <div className="flex items-center gap-8 py-6">
+        <div className="flex items-center justify-center md:justify-start gap-8 py-6">
           <button
             onClick={handlePlayAll}
             className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center hover:scale-105 transition-all shadow-lg"
@@ -71,7 +71,7 @@ export default function FavoritesPage() {
         </div>
 
         {/* Tracks List Header */}
-        <div className="grid grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium sticky top-20 bg-[#050505] z-20">
+        <div className="grid grid-cols-[16px_4fr_minmax(80px,1fr)] md:grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium sticky top-20 bg-[#050505] z-20">
           <div className="text-center">#</div>
           <div>Title</div>
           <div className="hidden md:block">Album</div>
@@ -86,7 +86,7 @@ export default function FavoritesPage() {
             <div
               key={track.id}
               onClick={() => playTrack(track)}
-              className="group grid grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
+              className="group grid grid-cols-[16px_4fr_minmax(80px,1fr)] md:grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
             >
               <div className="text-sm text-gray-400 text-center group-hover:hidden">
                 {index + 1}
@@ -115,17 +115,17 @@ export default function FavoritesPage() {
                 {track.attributes.albumName}
               </div>
 
-              <div className="flex items-center justify-end gap-8">
+              <div className="flex items-center justify-end gap-4 md:gap-8">
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
-                  className="opacity-0 group-hover:opacity-100 hover:scale-110 transition-all focus:opacity-100"
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:scale-110 transition-all"
                 >
                   <Heart className="w-4 h-4 text-emerald-500 fill-emerald-500" />
                 </button>
                 <span className="text-sm text-gray-400 tabular-nums">
                   {formatDuration(track.attributes.durationInMillis)}
                 </span>
-                <button className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
+                <button className="hidden md:block opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
               </div>
