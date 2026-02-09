@@ -17,6 +17,7 @@ interface FavoritesContextType {
   addToPlaylist: (playlistId: string, track: SearchTrack) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   deletePlaylist: (playlistId: string) => void;
+  renamePlaylist: (playlistId: string, newName: string) => void;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | null>(null);
@@ -108,6 +109,17 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     setPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
   }, []);
 
+  const renamePlaylist = useCallback((playlistId: string, newName: string) => {
+    setPlaylists((prev) =>
+      prev.map((p) => {
+        if (p.id === playlistId) {
+          return { ...p, name: newName };
+        }
+        return p;
+      })
+    );
+  }, []);
+
   return (
     <FavoritesContext.Provider
       value={{
@@ -119,6 +131,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         addToPlaylist,
         removeFromPlaylist,
         deletePlaylist,
+        renamePlaylist,
       }}
     >
       {children}

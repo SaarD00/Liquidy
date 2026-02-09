@@ -1,6 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { motion } from "framer-motion";
-import { Play, Pause, Heart, MoreHorizontal, User, Search, Youtube } from "lucide-react";
+import { Play, Pause, Heart, MoreHorizontal, Search, Youtube, ChevronLeft, ChevronRight, Bell, Music2, Settings, LogOut, User } from "lucide-react";
 import { searchTracks, SearchTrack, getArtworkUrl, formatDuration, isYouTubeTrack } from "@/lib/api";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
@@ -18,47 +27,22 @@ const QUICK_PICKS = [
   { name: "Electronic", query: "electronic" },
 ];
 
-// Default gradient colors
-const DEFAULT_COLORS = {
-  primary: 'rgba(92, 179, 246, 0.3)',
-  secondary: 'rgba(236, 72, 154, 0.47)',
-  accent: 'rgba(84, 49, 166, 0.53)',
-  accent2: 'rgba(6, 130, 212, 0.19)',
-  accent3: 'rgba(117, 46, 183, 0.28)',
-  center: 'rgba(199, 54, 173, 0.35)'
-};
+// Get greeting based on time of day
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function HomePage() {
   const [tracks, setTracks] = useState<SearchTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [activeTab, setActiveTab] = useState("MUSIC");
   const { playTrack, currentTrack, isPlaying, addToQueue, queue } = usePlayer();
   const { isLiked, toggleLike } = useFavorites();
   const { dynamicBackground } = useSettings();
-
-  // Dynamic background colors extracted from album art
-  const [bgColors, setBgColors] = useState(DEFAULT_COLORS);
-
-  // Extract colors from current track's album art
-  useEffect(() => {
-    if (dynamicBackground && currentTrack?.attributes?.artwork?.url) {
-      const artworkUrl = getArtworkUrl(currentTrack.attributes.artwork.url, 100);
-      extractColorsFromImage(artworkUrl).then(colors => {
-        setBgColors({
-          primary: colors.primary,
-          secondary: colors.secondary,
-          accent: colors.accent,
-          accent2: colors.secondary.replace('0.35', '0.2'),
-          accent3: colors.accent.replace('0.25', '0.3'),
-          center: colors.primary.replace('0.4', '0.25')
-        });
-      });
-    } else {
-      // Reset to default when disabled
-      setBgColors(DEFAULT_COLORS);
-    }
-  }, [currentTrack, dynamicBackground]);
+  const navigate = useNavigate();
 
   const handleSearch = useCallback(async (query: string) => {
     setLoading(true);
@@ -79,345 +63,283 @@ export default function HomePage() {
   };
 
   // Get display tracks - either search results or queue
-  const displayTracks = searched ? tracks : queue.slice(0, 4);
-  const upNextTracks = queue.slice(1, 4);
+  const displayTracks = searched ? tracks : queue.slice(0, 5);
+  const upNextTracks = queue.slice(1, 7);
 
   return (
-    /* 1. MAIN WRAPPER: Deep Void Base + Mesh Gradient */
-    <div className="min-h-screen w-full bg-[#0a0a0f] text-white relative overflow-hidden pb-28">
+    <div className="min-h-screen w-full bg-[#050505] text-white overflow-hidden flex flex-col antialiased selection:bg-emerald-500 selection:text-black">
 
-      {/* 2. THE MESH GRADIENT BACKGROUND - Dynamic or Default */}
-      <div
-        className="absolute inset-0 pointer-events-none transition-all duration-1000"
-        style={{
-          background: `
-            radial-gradient(at 0% 0%, ${bgColors.primary} 0px, transparent 50%),
-            radial-gradient(at 80% 0%, ${bgColors.secondary} 0px, transparent 50%),
-            radial-gradient(at 100% 50%, ${bgColors.accent} 0px, transparent 40%),
-            radial-gradient(at 20% 100%, ${bgColors.accent2} 0px, transparent 50%),
-            radial-gradient(at 80% 100%, ${bgColors.accent3} 0px, transparent 40%),
-            radial-gradient(at 50% 50%, ${bgColors.center} 0px, transparent 70%)
-          `
-        }}
-      />
+      {/* Header */}
+      <header className="h-20 flex items-center justify-between px-8 z-30 relative md:pl-80">
+        {/* Left - Navigation Arrows */}
+        {/* <div className="flex items-center gap-6">
+          <div className="flex gap-4">
+            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-gray-400 hover:text-white transition-colors border border-white/5">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-gray-400 hover:text-white transition-colors border border-white/5">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div> */}
 
-      {/* Animated floating orbs for extra depth */}
-      <div
-        className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full blur-[120px] animate-pulse transition-colors duration-1000"
-        style={{ backgroundColor: dynamicBackground && currentTrack ? bgColors.primary.replace('0.3', '0.2').replace('0.4', '0.2') : 'rgba(147, 51, 234, 0.2)' }}
-      />
-      <div
-        className="absolute top-[10%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[100px] transition-colors duration-1000"
-        style={{ backgroundColor: dynamicBackground && currentTrack ? bgColors.secondary.replace(/[\d.]+\)$/, '0.15)') : 'rgba(236, 72, 153, 0.15)' }}
-      />
-      <div
-        className="absolute bottom-[-10%] left-[20%] w-[400px] h-[400px] rounded-full blur-[80px] transition-colors duration-1000"
-        style={{ backgroundColor: dynamicBackground && currentTrack ? bgColors.accent.replace(/[\d.]+\)$/, '0.1)') : 'rgba(6, 182, 212, 0.1)' }}
-      />
-      <div
-        className="absolute bottom-[20%] right-[10%] w-[300px] h-[300px] rounded-full blur-[60px] transition-colors duration-1000"
-        style={{ backgroundColor: dynamicBackground && currentTrack ? bgColors.accent3.replace(/[\d.]+\)$/, '0.15)') : 'rgba(139, 92, 246, 0.15)' }}
-      />
-
-      {/* 3. CONTENT CONTAINER (Relative + z-10 to sit on top of background) */}
-
-      <div className="relative z-10 flex">
-        <div className="ml-28">
-
-          <DesktopSidebar />
+        {/* Center - Search Bar */}
+        <div className="flex-1 max-w-xl ml-96 mx-8">
+          <SearchBar onSearch={handleSearch} isLoading={loading} />
         </div>
 
-
-        {/* Left/Center Content */}
-        <div className="flex-1 p-6 md:p-6 lg:pr-0">
-
-          {/* Header with tabs */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              {["MUSIC", "PODCASTS", "LIVE"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider transition-all ${activeTab === tab
-                    ? "bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)] border border-white/10"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                    }`}
-                >
-                  {tab}
-                </button>
-              ))}
-              <div className="ml-64 w-full hidden md:flex">
-                <SearchBar onSearch={handleSearch} isLoading={loading} />
+        {/* Right - Actions */}
+        <div className="flex items-center gap-6">
+          <button className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors hidden md:block">
+            Upgrade
+          </button>
+          <button className="text-gray-400 hover:text-white transition-colors">
+            <Bell className="w-5 h-5" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="w-9 h-9 rounded-full glass-panel overflow-hidden cursor-pointer hover:border-white/30 transition-all p-0.5">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">
+                  <User className="w-5 h-5 text-white/80" />
+                </div>
               </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 bg-[#0a0a0a] border-white/10 text-white" align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem className="focus:bg-white/10 cursor-pointer" onClick={() => navigate("/settings")}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="focus:bg-white/10 cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem className="focus:bg-white/10 cursor-pointer text-red-400 focus:text-red-400">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      {/* Sidebar */}
+      <DesktopSidebar />
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex overflow-hidden px-4 pb-28 gap-4 z-10 relative md:pl-80">
+
+        {/* Center Content */}
+        <section className="flex-1 glass-panel rounded-2xl flex flex-col relative overflow-hidden">
+          {/* Emerald Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-900/10 via-transparent to-transparent pointer-events-none" />
+
+          <div className="flex-1 overflow-y-auto p-8 relative z-10">
+            {/* Greeting */}
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}</h2>
             </div>
-          </div>
 
-          {/* Hero Section - Now Streaming */}
-          {currentTrack ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden
-                rounded-3xl p-6 mr-10 md:p-8 mb-6
-                shadow-2xl border border-white/10
-                /* Keeping your card specific gradient as it acts as a nice contrast to the page bg */
-                bg-[#080810]
-                bg-[radial-gradient(circle_at_top_right,_#8B5CF640_0%,_transparent_40%),radial-gradient(circle_at_top_left,_#3B82F640_0%,_transparent_50%)]"
-            >
-              <div className="">
-                <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
-
-                  {/* === NEW: Vinyl Disc with Hover Effect === */}
-                  <div
-                    className="relative group cursor-pointer"
-                    onClick={() => playTrack(currentTrack)}
+            {/* Quick Access Grid - When no search */}
+            {!searched && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+                {QUICK_PICKS.slice(0, 3).map((pick) => (
+                  <motion.div
+                    key={pick.name}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => handleQuickPick(pick.query)}
+                    className="group flex items-center bg-white/5 hover:bg-white/10 rounded-xl overflow-hidden transition-all border border-white/5 cursor-pointer"
                   >
-                    <motion.div
-                      className={`w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden relative border-4 border-[#1a1a1a] shadow-[0_0_50px_rgba(0,0,0,0.5)] ${isPlaying ? "animate-pulse" : ""}`}
-                    >
-                      {/* Album art (Scales on hover) */}
-                      <div
-                        className="w-full h-full rounded-full transform group-hover:scale-105 transition-transform duration-500"
-                        style={{
-                          backgroundImage: currentTrack ? `url(${getArtworkUrl(currentTrack.attributes.artwork.url, 300)})` : undefined,
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                        }}
-                      />
-
-                      {/* The Frosted Overlay (Appears on hover) */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[3px] rounded-full z-20">
-                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center shadow-lg">
-                          {isPlaying ? <Pause size={28} fill="white" /> : <Play size={28} fill="white" className="ml-1" />}
-                        </div>
-                      </div>
-                    </motion.div>
-                  </div>
-                  {/* ========================================= */}
-
-                  {/* Track Info */}
-                  <div className="flex-1 text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_#ef4444]" />
-                      <span className="text-xs font-medium tracking-widest text-gray-400">NOW STREAMING</span>
+                    <div className="w-20 h-20 bg-gradient-to-br from-emerald-600/40 to-teal-800/40 flex items-center justify-center">
+                      <Music2 className="w-8 h-8 text-emerald-400" />
                     </div>
-
-                    <h1 className="text-3xl md:text-4xl  lg:text-5xl font-bold text-white mb-1 tracking-tight">
-                      {currentTrack.attributes.name}
-                    </h1>
-
-                    <p className="text-lg text-gray-200 mb-1">{currentTrack.attributes.artistName}</p>
-                    <p className="text-sm text-gray-500 tracking-widest uppercase mb-6">
-                      {currentTrack.attributes.albumName}
-                    </p>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-center md:justify-start gap-3">
-                      <button
-                        onClick={() => playTrack(currentTrack)}
-                        className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)]"
-                      >
-                        {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
-                      </button>
-                      <button
-                        onClick={() => toggleLike(currentTrack)}
-                        className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/5"
-                      >
-                        <Heart className={`w-5 h-5 ${isLiked(currentTrack.id) ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
-                      </button>
-                      <button className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors border border-white/5">
-                        <MoreHorizontal className="w-5 h-5 text-white" />
-                      </button>
+                    <span className="ml-4 font-bold text-white text-sm">{pick.name}</span>
+                    <div className="ml-auto mr-4 w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
+                      <Play className="w-5 h-5 text-black fill-black" />
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                ))}
               </div>
-            </motion.div>
-          ) : (
-            /* Welcome Hero when no track */
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden
-                rounded-3xl p-6 mr-10 md:p-8 mb-6
-                shadow-2xl border border-white/10
-                bg-[#080810]
-                bg-[radial-gradient(circle_at_top_right,_#8B5CF640_0%,_transparent_40%),radial-gradient(circle_at_top_left,_#3B82F640_0%,_transparent_50%)]"
-            >
-              <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+            )}
 
-                {/* === NEW: Vinyl Placeholder with Hover Effect === */}
-                <div className="relative group cursor-pointer">
-                  <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden relative border-4 border-[#1a1a1a] bg-black/30">
-                    {/* Inner content (Scales on hover) */}
-                    <div className="w-full h-full flex items-center justify-center transform group-hover:scale-105 transition-transform duration-500">
-                      <div className="w-[50%] h-[50%] rounded-full bg-white/10 backdrop-blur-sm shadow-lg border border-white/20 flex items-center justify-center">
-                        <Search className="w-8 h-8 text-white/60" />
+            {/* Section Title */}
+            <div className="mb-12">
+              <div className="flex justify-between items-end mb-6">
+                <h3 className="text-xl font-bold">
+                  {searched ? "Search Results" : "Made for you"}
+                </h3>
+                {displayTracks.length > 0 && (
+                  <button className="text-xs font-bold text-soft hover:text-white uppercase tracking-widest transition-colors">
+                    Show all
+                  </button>
+                )}
+              </div>
+
+              {/* Track Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {displayTracks.map((track, index) => (
+                  <motion.div
+                    key={track.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => playTrack(track)}
+                    className="group bg-white/[0.03] p-4 rounded-2xl hover:bg-white/[0.08] transition-all border border-white/5 cursor-pointer"
+                  >
+                    {/* Album Art */}
+                    <div className="relative aspect-square rounded-xl overflow-hidden mb-4 shadow-2xl">
+                      <img
+                        alt={track.attributes.name}
+                        className="w-full h-full object-cover"
+                        src={getArtworkUrl(track.attributes.artwork.url, 400)}
+                      />
+                      {/* Play Button Overlay */}
+                      <div className="absolute bottom-3 right-3 w-12 h-12 rounded-full liquid-accent flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                        <Play className="w-6 h-6 text-black fill-black" />
                       </div>
+                      {/* YouTube Badge */}
+                      {isYouTubeTrack(track) && (
+                        <div className="absolute top-2 left-2 px-2 py-1 bg-red-500/90 rounded-md flex items-center gap-1">
+                          <Youtube className="w-3 h-3 text-white" />
+                          <span className="text-[10px] font-medium text-white">YouTube</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* The Frosted Overlay (Appears on hover) */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[3px] rounded-full z-20">
-                      <Search size={32} className="text-white/70" />
-                    </div>
-                  </div>
-                </div>
-                {/* ============================================ */}
+                    {/* Track Info */}
+                    <h4 className="font-bold text-white truncate text-sm">{track.attributes.name}</h4>
+                    <p className="text-xs text-soft line-clamp-2 mt-1">{track.attributes.artistName}</p>
+                  </motion.div>
+                ))}
+              </div>
 
-                {/* Info */}
-                <div className="flex-1 text-center md:text-left">
-                  <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                    <span className="w-2 h-2 rounded-full bg-gray-600" />
-                    <span className="text-xs font-medium tracking-widest text-gray-400">START LISTENING</span>
-                  </div>
-
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-1">
-                    Search
-                  </h1>
-                  <h2 className="text-2xl md:text-3xl lg:text-4xl italic text-indigo-200/80 mb-3 font-light">
-                    For Music
-                  </h2>
-
-                  <p className="text-lg text-gray-300 mb-1">Find your favorite tracks</p>
-                  <p className="text-sm text-gray-500 tracking-widest uppercase mb-6">
-                    DISCOVER NEW SOUNDS
-                  </p>
-
-                  {/* Quick Pick Buttons */}
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    {QUICK_PICKS.slice(0, 3).map((pick) => (
+              {/* Empty State */}
+              {displayTracks.length === 0 && !loading && (
+                <div className="text-center py-20">
+                  <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-400 mb-2">Search for music</h3>
+                  <p className="text-gray-500">Find your favorite songs, artists, or albums</p>
+                  <div className="flex flex-wrap justify-center gap-2 mt-6">
+                    {QUICK_PICKS.map((pick) => (
                       <button
                         key={pick.name}
                         onClick={() => handleQuickPick(pick.query)}
-                        className="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white hover:text-black transition-all"
+                        className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-white hover:bg-emerald-500 hover:text-black transition-all"
                       >
                         {pick.name}
                       </button>
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Loading State */}
+              {loading && (
+                <div className="flex justify-center py-20">
+                  <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Right Panel - Queue */}
+        <aside className="hidden xl:flex w-72 flex-col gap-4">
+          <div className="glass-panel rounded-2xl h-full flex flex-col overflow-hidden">
+            {/* Queue Header */}
+            <div className="p-6 border-b border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-white text-base">Up Next</h3>
+                <button className="text-gray-400 hover:text-white transition-colors">
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
               </div>
-            </motion.div>
-          )}
+              <p className="text-[11px] text-soft font-medium uppercase tracking-wider">
+                From: {currentTrack ? currentTrack.attributes.albumName || "Queue" : "Queue"}
+              </p>
+            </div>
 
-          {/* Track Cards Grid */}
-          <div>
-            <h3 className="text-xl font-bold text-white mb-6 tracking-wide">
-              {searched ? "Search Results" : "For You"}
-            </h3>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {displayTracks.map((track, index) => (
-                <motion.div
-                  key={track.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => playTrack(track)}
-                  className="group relative flex flex-col p-4 rounded-3xl bg-[#121212]/40 border border-white/5 hover:border-white/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] cursor-pointer"
-                >
-                  {/* Card Glow on Hover */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300 pointer-events-none" />
-
-                  {/* Artwork */}
-                  <div className="relative aspect-square mb-4 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-2xl transition-shadow">
+            {/* Queue Items */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {/* Currently Playing */}
+              {currentTrack && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 group cursor-default">
+                  <div className="relative w-10 h-10 shrink-0">
                     <img
-                      src={getArtworkUrl(track.attributes.artwork.url, 400)}
-                      alt={track.attributes.name}
-                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                      alt={currentTrack.attributes.name}
+                      className="w-full h-full rounded-md object-cover"
+                      src={getArtworkUrl(currentTrack.attributes.artwork.url, 100)}
                     />
-                    {/* Play Overlay */}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                      <div className={`w-12 h-12 rounded-full backdrop-blur-md border border-white/30 flex items-center justify-center ${isYouTubeTrack(track) ? 'bg-red-500/40' : 'bg-white/20'}`}>
-                        <Play size={20} fill="white" className="ml-1" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-md">
+                      {/* Animated EQ Bars */}
+                      <div className="flex gap-0.5 items-end h-3">
+                        {[...Array(3)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="w-0.5 bg-emerald-400 rounded-full"
+                            animate={isPlaying ? { height: ["30%", "100%", "30%"] } : { height: "30%" }}
+                            transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.15 }}
+                          />
+                        ))}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="relative z-10 px-1">
-                    <h4 className="font-bold text-white text-base truncate mb-1 group-hover:text-indigo-300 transition-colors">
-                      {track.attributes.name}
-                    </h4>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider truncate">
-                      {track.attributes.artistName}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-          </div>
-        </div>
-
-        {/* 4. RIGHT PANEL: GLASSMORPHISM EFFECT */}
-        <div className="hidden xl:block w-[400px]  rounded-xl h-full mt-20 pr-5 relative z-20">
-          <div className="h-full w-full  rounded-xl 
-          /* LIQUID GLASS MAGIC */
-          bg-gradient-to-tr from-[#281c46]/50 via-indigo-500/10 to-pink/50
-          backdrop-blur-lg
-          border-l border-white/20
-          shadow-[-10px_0_30px_rgba(0,0,0,0.5)]
-          p-8 flex flex-col
-        ">
-
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-sm font-bold  tracking-[0.1em] uppercase">Up Next</h3>
-              <button className="px-2 hover:bg-white/5 rounded-full transition-colors">
-                <MoreHorizontal size={20} className="text-gray-400" />
-              </button>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto space-y-2  scrollbar-thin scrollbar-thumb-white/10">
-              {upNextTracks.length > 0 ? upNextTracks.map((track, i) => (
-                <div key={i} onClick={() => playTrack(track)} className="group flex items-center gap-4 p-2 px-2 rounded-2xl hover:bg-white/10 transition-all cursor-pointer border border-transparent hover:border-white/5">
-                  <div className="relative">
-                    <img src={getArtworkUrl(track.attributes.artwork.url, 100)} className="w-14 h-14 rounded-xl object-cover shadow-md group-hover:scale-105 transition-transform" />
-                    {isYouTubeTrack(track) && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                        <Youtube size={10} className="text-white" />
-                      </div>
-                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-white text-sm truncate">{track.attributes.name}</h4>
-                    <p className="text-xs text-gray-500 truncate">{track.attributes.artistName}</p>
+                    <h4 className="text-xs font-bold text-emerald-400 truncate">{currentTrack.attributes.name}</h4>
+                    <p className="text-[10px] text-soft truncate">{currentTrack.attributes.artistName}</p>
                   </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isYouTubeTrack(track) ? 'bg-red-500' : 'bg-white'}`}>
-                      <Play size={12} fill={isYouTubeTrack(track) ? "white" : "black"} className="ml-0.5" />
-                    </div>
-                  </div>
+                  <span className="text-[10px] text-emerald-400 font-medium">Playing</span>
                 </div>
-              )) : (
-                <div className="text-center text-gray-600 mt-20 italic">Queue is empty</div>
+              )}
+
+              {/* Up Next Items */}
+              {upNextTracks.map((track, index) => (
+                <motion.div
+                  key={`${track.id}-${index}`}
+                  onClick={() => playTrack(track)}
+                  whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+                  className="flex items-center gap-3 p-3 rounded-xl transition-all group cursor-pointer"
+                >
+                  <img
+                    alt={track.attributes.name}
+                    className="w-10 h-10 rounded-md object-cover shrink-0"
+                    src={getArtworkUrl(track.attributes.artwork.url, 100)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-white truncate group-hover:text-emerald-400 transition-colors">
+                      {track.attributes.name}
+                    </h4>
+                    <p className="text-[10px] text-soft truncate">{track.attributes.artistName}</p>
+                  </div>
+                  <span className="text-[10px] text-soft group-hover:text-white">
+                    {formatDuration(track.attributes.durationInMillis)}
+                  </span>
+                </motion.div>
+              ))}
+
+              {/* Empty Queue State */}
+              {queue.length === 0 && (
+                <div className="text-center py-10">
+                  <Music2 className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">Queue is empty</p>
+                  <p className="text-xs text-gray-600 mt-1">Search for music to add tracks</p>
+                </div>
               )}
             </div>
 
-            {/* Bottom "Now Playing" Lyrics/Visualizer area */}
-            <div className="mt-20 p-6 rounded-3xl bg-black/20 border border-white/5 relative overflow-hidden group">
-              {/* Simple visualizer bars */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-indigo-500/10 to-transparent pointer-events-none" />
-              <p className="relative z-10 text-lg font-thin  text-white/80 text-center leading-relaxed">
-                <span className="brightness-125">"Floating through the</span> <br /> <span className=" text-indigo-300 blur-[1.3px]">endless night...</span>"
-              </p>
-              <div className="flex justify-center gap-1 mt-6 h-6 items-end">
-                {[...Array(5)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="w-1 bg-indigo-400 blur-[1px] brightness-125 rounded-full"
-                    animate={{ height: ["20%", "80%", "20%"] }}
-                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
-                  />
-                ))}
+            {/* Queue Footer */}
+            {queue.length > 0 && (
+              <div className="p-4 bg-white/[0.02] border-t border-white/5">
+                <button className="w-full py-2.5 rounded-xl border border-white/10 text-[11px] font-bold text-white hover:bg-white/5 transition-all uppercase tracking-widest">
+                  Open Full Queue
+                </button>
               </div>
-            </div>
-
+            )}
           </div>
-        </div>
-      </div>
+        </aside>
+      </main>
     </div>
   );
 }

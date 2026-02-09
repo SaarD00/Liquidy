@@ -1,108 +1,154 @@
-import { Home, Search, Library, Heart, Settings, AudioWaveform, Disc } from "lucide-react";
+import { Home, Compass, Library, Heart, Settings, Plus, Music } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useFavorites } from "@/contexts/FavoritesContext";
+import { getArtworkUrl } from "@/lib/api";
 
-const navItems = [
+const mainNavItems = [
   { icon: Home, label: "Home", path: "/" },
-  { icon: Search, label: "Search", path: "/search" },
-  { icon: Library, label: "Library", path: "/library" },
-  { icon: Heart, label: "Favorites", path: "/favorites" },
+  { icon: Compass, label: "Browse", path: "/search" },
 ];
+
+const libraryFilters = ["Playlists", "Artists"];
 
 export default function DesktopSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { likedSongs, playlists, createPlaylist } = useFavorites();
+
+  // Get first few favorites for library display
+  const libraryItems = likedSongs.slice(0, 3);
+
+  const handleCreatePlaylist = () => {
+    const name = `My Playlist #${playlists.length + 1}`;
+    const newPlaylist = createPlaylist(name);
+    navigate(`/playlist/${newPlaylist.id}`);
+  };
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-24 scale-90 bg-white/5 backdrop-blur-lg border border-white/20   rounded-lg ml-2 z-50 flex-col items-center py-8 
-      /* LIQUID GLASS CONTAINER */
-      bg-[#09090b]/10
-      backdrop-blur-3xl 
-      border-r border-white/5 
-      shadow-[5px_0_30px_rgba(0,0,0,0.5)]"
-    >
+    <aside className="hidden md:flex fixed left-4 top-20 bottom-28 w-72 z-40 flex-col gap-4">
 
-      {/* Logo Section */}
-      <div className="mb-10 relative group cursor-pointer">
-        <div className="absolute inset-0 bg-indigo-500/30 blur-xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
-        <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1e1b4b] to-[#0f172a] border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)]">
-          <AudioWaveform className="w-7 h-7 text-indigo-400 drop-shadow-[0_0_5px_rgba(129,140,248,0.5)]" />
-        </div>
-      </div>
-
-      {/* Main Nav */}
-      <nav className="flex-1 flex flex-col items-center gap-6 w-full px-4">
-        {navItems.map(({ icon: Icon, label, path }) => {
+      {/* Top Navigation Panel */}
+      <div className="glass-panel rounded-2xl p-5 flex flex-col gap-5">
+        {mainNavItems.map(({ icon: Icon, label, path }) => {
           const active = location.pathname === path;
           return (
             <button
               key={path}
               onClick={() => navigate(path)}
-              title={label}
-              className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 group ${active
-                ? "text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-                : "text-gray-500 hover:text-indigo-200 hover:bg-white/5"
+              className={`flex items-center gap-4 px-2 cursor-pointer transition-colors ${active
+                ? "text-white"
+                : "text-gray-300 hover:text-white"
                 }`}
             >
-              {/* Active State: Liquid Glass Background */}
-              {active && (
-                <motion.div
-                  layoutId="sidebar-active-bg"
-                  className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent border border-white/10 rounded-2xl backdrop-blur-md"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-
-              {/* Active State: Neon Indicator Line */}
-              {active && (
-                <motion.div
-                  layoutId="sidebar-indicator"
-                  className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-500 rounded-r-full shadow-[0_0_10px_#6366f1]"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
-              )}
-
-              {/* Icon */}
-              <Icon className={`relative z-10 w-6 h-6 transition-transform duration-300 ${active ? "scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : "group-hover:scale-110"}`} />
-
-              {/* Tooltip (Frosted) */}
-              <div className="absolute left-full ml-5 px-3 py-1.5 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl translate-x-[-10px] group-hover:translate-x-0 duration-200">
-                {label}
-              </div>
+              <Icon className={`w-5 h-5 ${active ? 'text-emerald-400' : ''}`} />
+              <span className="font-medium">{label}</span>
             </button>
           );
         })}
-      </nav>
-
-      {/* Bottom section */}
-      <div className="flex flex-col items-center gap-4 mb-4 w-full px-4">
-        <button
-          onClick={() => navigate("/settings")}
-          title="Settings"
-          className={`relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 group ${location.pathname === "/settings"
-            ? "text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
-            : "text-gray-500 hover:text-white hover:bg-white/5"
-            }`}
-        >
-          {location.pathname === "/settings" && (
-            <motion.div
-              layoutId="sidebar-active-bg"
-              className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent border border-white/10 rounded-2xl backdrop-blur-md"
-            />
-          )}
-
-          <Settings className={`relative z-10 w-6 h-6 transition-transform duration-500 ${location.pathname === "/settings" ? "rotate-90 text-white" : "group-hover:rotate-90"}`} />
-
-          {/* Tooltip */}
-          <div className="absolute left-full ml-5 px-3 py-1.5 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
-            Settings
-          </div>
-        </button>
-
-        {/* User Avatar Placeholder (Matching image style) */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 border-2 border-[#09090b] shadow-lg cursor-pointer hover:scale-105 transition-transform" />
       </div>
+
+      {/* Library Panel */}
+      <div className="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col">
+        {/* Library Header */}
+        <div className="p-5 border-b border-white/5">
+          <div className="flex items-center justify-between text-gray-400 mb-4">
+            <div className="flex items-center gap-3">
+              <Library className="w-5 h-5" />
+              <span className="font-semibold text-white text-sm">Your Library</span>
+            </div>
+            <button
+              className="hover:text-white transition-colors"
+              onClick={handleCreatePlaylist}
+              title="Create Playlist"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {libraryFilters.map((filter) => (
+              <span
+                key={filter}
+                className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-medium text-white hover:bg-white/10 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {filter}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Library Items */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {/* Liked Songs - Always show */}
+          <button
+            onClick={() => navigate("/favorites")}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-all ${location.pathname === "/favorites" ? "bg-white/5" : ""
+              }`}
+          >
+            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center shadow-lg">
+              <Heart className="w-5 h-5 text-white fill-white" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <h4 className="text-sm font-medium text-white truncate">Liked Songs</h4>
+              <p className="text-xs text-soft flex items-center gap-1">
+                Playlist • {likedSongs.length} songs
+              </p>
+            </div>
+          </button>
+
+          {/* User Playlists */}
+          {playlists.map((playlist) => (
+            <button
+              key={playlist.id}
+              onClick={() => navigate(`/playlist/${playlist.id}`)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer group transition-all ${location.pathname === `/playlist/${playlist.id}` ? "bg-white/5" : ""}`}
+            >
+              <div className="w-11 h-11 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden">
+                {playlist.tracks.length > 0 ? (
+                  <img
+                    src={getArtworkUrl(playlist.tracks[0].attributes.artwork.url, 100)}
+                    className="w-full h-full object-cover"
+                    alt={playlist.name}
+                  />
+                ) : (
+                  <Music className="w-5 h-5 text-gray-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <h4 className="text-sm font-medium text-white truncate">
+                  {playlist.name}
+                </h4>
+                <p className="text-xs text-soft truncate">
+                  Playlist • {playlist.tracks.length} songs
+                </p>
+              </div>
+            </button>
+          ))}
+
+          {/* Empty state if no favorites */}
+          {likedSongs.length === 0 && (
+            <div className="text-center py-8">
+              <Music className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">No liked songs yet</p>
+              <p className="text-xs text-gray-600 mt-1">Search and like songs to see them here</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Settings Button at Bottom (optional) */}
+      {/* <button
+        onClick={() => navigate("/settings")}
+        className={`glass-panel rounded-2xl p-4 flex items-center gap-3 transition-colors ${location.pathname === "/settings"
+          ? "text-white border-emerald-500/30"
+          : "text-gray-400 hover:text-white"
+          }`}
+      >
+        <Settings className={`w-5 h-5 ${location.pathname === "/settings" ? "text-emerald-400" : ""}`} />
+        <span className="font-medium text-sm">Settings</span>
+      </button> */}
     </aside>
   );
 }

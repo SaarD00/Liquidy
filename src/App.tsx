@@ -17,6 +17,8 @@ import MusicPlayer from "./components/MusicPlayer";
 import BottomNav from "./components/BottomNav";
 import DesktopSidebar from "./components/DesktopSidebar";
 
+import PlaylistPage from "./pages/PlaylistPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -36,6 +38,7 @@ const App = () => (
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/library" element={<LibraryPage />} />
                       <Route path="/favorites" element={<FavoritesPage />} />
+                      <Route path="/playlist/:id" element={<PlaylistPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

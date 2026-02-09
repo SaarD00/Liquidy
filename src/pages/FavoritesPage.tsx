@@ -1,122 +1,158 @@
-import { Heart, Play, User } from "lucide-react";
+import { Heart, Play, Clock, MoreHorizontal, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { getArtworkUrl, formatDuration } from "@/lib/api";
+import { format } from "date-fns";
 
 export default function FavoritesPage() {
-  const { likedSongs, toggleLike, isLiked } = useFavorites();
-  const { playTrack, addToQueue } = usePlayer();
+  const { likedSongs, toggleLike } = useFavorites();
+  const { playTrack, addToQueue, currentTrack, isPlaying, togglePlay } = usePlayer();
 
   const handlePlayAll = () => {
     if (likedSongs.length > 0) {
-      addToQueue(likedSongs);
-      playTrack(likedSongs[0]);
+      // If already playing the first song, just toggle
+      if (currentTrack?.id === likedSongs[0].id) {
+        togglePlay();
+      } else {
+        addToQueue(likedSongs);
+        playTrack(likedSongs[0]);
+      }
     }
   };
 
   return (
-    <div className="min-h-screen pb-36 md:pb-28">
-      <div className="p-4 md:p-6 max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen pb-32 w-full bg-[#050505] text-white">
+      {/* Header Section with Gradient Background */}
+      <div className="relative h-80 flex items-end p-8 pb-6 bg-gradient-to-b from-emerald-900/50 via-[#050505] to-[#050505]">
+        {/* Absolute Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#050505]" />
+
+        <div className="relative z-10 flex items-end gap-6 w-full max-w-7xl mx-auto">
+          {/* Large Cover Art */}
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-52 h-52 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] rounded-md bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shrink-0"
           >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500/20 to-red-500/20 flex items-center justify-center border border-pink-500/20">
-              <Heart className="w-7 h-7 text-pink-500" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Favorites</h1>
-              <p className="text-sm text-muted-foreground">{likedSongs.length} songs</p>
-            </div>
+            <Heart className="w-24 h-24 text-white fill-white" />
           </motion.div>
 
-          {/* Profile */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
+          {/* Playlist Info */}
+          <div className="flex flex-col gap-2 mb-2 flex-1">
+            <span className="text-sm font-bold uppercase tracking-wider">Playlist</span>
+            <h1 className="text-6xl md:text-8xl font-black tracking-tight text-white mb-4">Liked Songs</h1>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-black font-bold">
+                U
+              </div>
+              <span className="hover:underline cursor-pointer text-white">User</span>
+              <span>•</span>
+              <span>{likedSongs.length} songs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-8 relative z-10 bg-[#050505]">
+        {/* Action Bar */}
+        <div className="flex items-center gap-8 py-6">
+          <button
+            onClick={handlePlayAll}
+            className="w-14 h-14 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center hover:scale-105 transition-all shadow-lg"
+          >
+            {isPlaying && currentTrack && likedSongs.some(t => t.id === currentTrack.id) ? (
+              <PauseIcon className="w-6 h-6 fill-black" />
+            ) : (
+              <Play className="w-6 h-6 fill-black ml-1" />
+            )}
+          </button>
+        </div>
+
+        {/* Tracks List Header */}
+        <div className="grid grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-2 border-b border-white/10 text-sm text-gray-400 font-medium sticky top-20 bg-[#050505] z-20">
+          <div className="text-center">#</div>
+          <div>Title</div>
+          <div className="hidden md:block">Album</div>
+          <div className="text-right flex items-center justify-end gap-2">
+            <Clock className="w-4 h-4" />
           </div>
         </div>
 
-        {likedSongs.length > 0 ? (
-          <>
-            {/* Play All Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6"
+        {/* Tracks List */}
+        <div className="mt-4 space-y-2">
+          {likedSongs.map((track, index) => (
+            <div
+              key={track.id}
+              onClick={() => playTrack(track)}
+              className="group grid grid-cols-[16px_4fr_3fr_minmax(120px,1fr)] gap-4 px-4 py-3 rounded-md hover:bg-white/10 transition-colors cursor-pointer items-center"
             >
-              <button
-                onClick={handlePlayAll}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:opacity-90 transition-all hover:scale-105 active:scale-95"
-              >
-                <Play className="w-5 h-5" />
-                Play All
-              </button>
-            </motion.div>
-
-            {/* Tracks Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {likedSongs.map((track, index) => (
-                <motion.div
-                  key={track.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
-                  onClick={() => playTrack(track)}
-                  className="track-card group cursor-pointer"
-                >
-                  <div className="relative aspect-square">
-                    <img
-                      src={getArtworkUrl(track.attributes.artwork.url, 300)}
-                      alt={track.attributes.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center transform group-hover:scale-100 scale-90 transition-transform">
-                        <Play className="w-5 h-5 text-black ml-0.5" />
-                      </div>
-                    </div>
-                    {/* Unlike button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
-                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center transition-colors hover:bg-black/70"
-                    >
-                      <Heart className="w-4 h-4 liked-heart" />
-                    </button>
-                  </div>
-                  <div className="p-3">
-                    <p className="font-medium text-foreground truncate text-sm">{track.attributes.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{track.attributes.artistName}</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
-                      {formatDuration(track.attributes.durationInMillis)}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-20"
-          >
-            <div className="glass-card rounded-3xl p-10 text-center max-w-sm">
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-pink-500/20 to-red-500/20 flex items-center justify-center mb-6">
-                <Heart className="w-10 h-10 text-pink-500/50" />
+              <div className="text-sm text-gray-400 text-center group-hover:hidden">
+                {index + 1}
               </div>
-              <h2 className="text-xl font-display font-bold text-foreground mb-3">No Favorites Yet</h2>
-              <p className="text-muted-foreground text-sm">
-                Tracks you love will show up here. Tap the heart icon on any track to save it.
-              </p>
+              <div className="hidden group-hover:flex justify-center text-white">
+                <Play className="w-4 h-4 fill-white" />
+              </div>
+
+              <div className="flex items-center gap-4 min-w-0">
+                <img
+                  src={getArtworkUrl(track.attributes.artwork.url, 100)}
+                  alt={track.attributes.name}
+                  className="w-10 h-10 rounded shadow-sm object-cover"
+                />
+                <div className="min-w-0">
+                  <div className={`text-base font-medium truncate ${currentTrack?.id === track.id ? 'text-emerald-500' : 'text-white'}`}>
+                    {track.attributes.name}
+                  </div>
+                  <div className="text-sm text-gray-400 truncate group-hover:text-white transition-colors">
+                    {track.attributes.artistName}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden md:flex text-sm text-gray-400 truncate items-center group-hover:text-white transition-colors">
+                {track.attributes.albumName}
+              </div>
+
+              <div className="flex items-center justify-end gap-8">
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
+                  className="opacity-0 group-hover:opacity-100 hover:scale-110 transition-all focus:opacity-100"
+                >
+                  <Heart className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+                </button>
+                <span className="text-sm text-gray-400 tabular-nums">
+                  {formatDuration(track.attributes.durationInMillis)}
+                </span>
+                <button className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white">
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </motion.div>
-        )}
+          ))}
+
+          {likedSongs.length === 0 && (
+            <div className="text-center py-20 text-gray-500">
+              <Heart className="w-16 h-16 mx-auto mb-4 text-gray-700" />
+              <p className="text-lg font-medium text-white">Songs you like will appear here</p>
+              <p className="text-sm">Save songs by tapping the heart icon.</p>
+              <button className="mt-8 px-6 py-3 rounded-full bg-white text-black font-bold hover:scale-105 transition-transform">
+                Find Songs
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function PauseIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
   );
 }
