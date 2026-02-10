@@ -12,6 +12,9 @@ interface ThemeContextType {
   resetTheme: () => void;
 }
 
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 export function useTheme() {
@@ -51,6 +54,7 @@ const rgbToHsl = (r: number, g: number, b: number) => {
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem(THEME_KEY) as Theme) || "dark";
@@ -82,14 +86,44 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add(`theme-${colorTheme}`);
     }
 
-    // Clean up custom properties if we are setting a preset
-    // But wait, if we are in "dynamic" mode, we might want to override this.
-    // Ideally, setCustomTheme will override these classes via style attributes which have higher specificity 
-    // or we should clear the style attributes when colorTheme changes.
     resetThemeStyles();
 
     localStorage.setItem(COLOR_THEME_KEY, colorTheme);
   }, [colorTheme]);
+
+  // Sync theme to Supabase
+  useEffect(() => {
+    if (!user) return;
+
+    const syncTheme = async () => {
+      const { data } = await supabase
+        .from('user_data')
+        .select('theme_preferences')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data?.theme_preferences) {
+        setTheme(data.theme_preferences.theme || 'dark');
+        setColorThemeState(data.theme_preferences.colorTheme || 'default');
+      }
+    };
+
+    syncTheme();
+  }, [user]);
+
+  // Save theme to Supabase
+  useEffect(() => {
+    if (!user) return;
+
+    const timeout = setTimeout(async () => {
+      await supabase.from('user_data').upsert({
+        user_id: user.id,
+        theme_preferences: { theme, colorTheme }
+      });
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [theme, colorTheme, user]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 

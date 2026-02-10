@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { SearchTrack } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 interface Playlist {
   id: string;
@@ -32,6 +34,7 @@ const LIKED_KEY = "sonicflow_liked_songs";
 const PLAYLISTS_KEY = "sonicflow_playlists";
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [likedSongs, setLikedSongs] = useState<SearchTrack[]>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(LIKED_KEY);
@@ -55,6 +58,54 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
   }, [playlists]);
+
+  // Sync with Supabase on Mount / Auth Change
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchData = async () => {
+      const { data } = await supabase
+        .from('user_data')
+        .select('favorites, playlists')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data) {
+        if (data.favorites && Array.isArray(data.favorites)) {
+          setLikedSongs(prev => {
+            const localIds = new Set(prev.map(t => t.id));
+            const newItems = data.favorites.filter((t: SearchTrack) => !localIds.has(t.id));
+            return [...prev, ...newItems];
+          });
+        }
+        if (data.playlists && Array.isArray(data.playlists)) {
+          setPlaylists(prev => {
+            const localIds = new Set(prev.map(p => p.id));
+            const newItems = data.playlists.filter((p: Playlist) => !localIds.has(p.id));
+            return [...prev, ...newItems];
+          });
+        }
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  // Sync to Supabase on Change
+  useEffect(() => {
+    if (!user) return;
+
+    const timeout = setTimeout(async () => {
+      await supabase.from('user_data').upsert({
+        user_id: user.id,
+        favorites: likedSongs,
+        playlists: playlists
+      });
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [likedSongs, playlists, user]);
+
 
   const isLiked = useCallback((trackId: string) => {
     return likedSongs.some((t) => t.id === trackId);

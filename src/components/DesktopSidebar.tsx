@@ -1,7 +1,9 @@
+
 import { Home, Compass, Library, Heart, Settings, Plus, Music } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { getArtworkUrl } from "@/lib/api";
 
 const mainNavItems = [
@@ -15,6 +17,7 @@ export default function DesktopSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { likedSongs, playlists, createPlaylist } = useFavorites();
+  const { user } = useAuth();
 
   // Get first few favorites for library display
   const libraryItems = likedSongs.slice(0, 3);
@@ -138,17 +141,32 @@ export default function DesktopSidebar() {
         </div>
       </div>
 
-      {/* Settings Button at Bottom (optional) */}
-      {/* <button
+      {/* Settings / Profile Button */}
+      <button
         onClick={() => navigate("/settings")}
         className={`glass-panel rounded-2xl p-4 flex items-center gap-3 transition-colors ${location.pathname === "/settings"
-          ? "text-white border-emerald-500/30"
-          : "text-gray-400 hover:text-white"
+          ? "text-primary border-primary/30 bg-primary/10"
+          : "text-gray-400 hover:text-white hover:bg-white/5"
           }`}
       >
-        <Settings className={`w-5 h-5 ${location.pathname === "/settings" ? "text-emerald-400" : ""}`} />
-        <span className="font-medium text-sm">Settings</span>
-      </button> */}
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user ? 'bg-primary/20 text-primary' : 'bg-gray-800 text-gray-400'}`}>
+          {user ? (
+            <span className="font-bold text-xs">
+              {user.user_metadata?.username
+                ? user.user_metadata.username.charAt(0).toUpperCase()
+                : user.email?.charAt(0).toUpperCase()}
+            </span>
+          ) : (
+            <Settings className="w-5 h-5" />
+          )}
+        </div>
+        <div className="flex flex-col items-start">
+          <span className="font-medium text-sm text-white">
+            {user ? 'My Account' : 'Settings'}
+          </span>
+          {user && <span className="text-[10px] text-primary">Signed In</span>}
+        </div>
+      </button>
     </aside>
   );
 }

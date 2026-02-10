@@ -4,6 +4,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useHistory } from "@/contexts/HistoryContext";
 import { extractColorsFromImage } from "@/lib/colorExtractor";
 import {
   DropdownMenu,
@@ -28,6 +29,7 @@ export default function MusicPlayer() {
   const { isLiked, toggleLike, playlists, addToPlaylist } = useFavorites();
   const { setCustomTheme, resetTheme } = useTheme();
   const { dynamicBackground } = useSettings();
+  const { addToHistory } = useHistory();
 
   const [expanded, setExpanded] = useState(false);
   const [volume, setVolume] = useState(80);
@@ -57,7 +59,11 @@ export default function MusicPlayer() {
         resetTheme();
       }
     }
-  }, [currentTrack, dynamicBackground, setCustomTheme, resetTheme]);
+
+    if (currentTrack) {
+      addToHistory(currentTrack);
+    }
+  }, [currentTrack, dynamicBackground, setCustomTheme, resetTheme, addToHistory]);
 
 
   // Reset when video changes

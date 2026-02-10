@@ -7,6 +7,8 @@ import { PlayerProvider } from "@/contexts/PlayerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { HistoryProvider } from "@/contexts/HistoryContext";
 import Index from "./pages/Index";
 import SearchPage from "./pages/SearchPage";
 import LibraryPage from "./pages/LibraryPage";
@@ -18,40 +20,46 @@ import BottomNav from "./components/BottomNav";
 import DesktopSidebar from "./components/DesktopSidebar";
 
 import PlaylistPage from "./pages/PlaylistPage";
+import AuthPage from "./pages/AuthPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <SettingsProvider>
-        <FavoritesProvider>
-          <PlayerProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <div className="flex h-screen overflow-hidden scrollbar-hide w-full">
-                  <main className="flex-1 overflow-hidden scrollbar-hide">
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/search" element={<SearchPage />} />
-                      <Route path="/library" element={<LibraryPage />} />
-                      <Route path="/favorites" element={<FavoritesPage />} />
-                      <Route path="/playlist/:id" element={<PlaylistPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </main>
-                </div>
-                <MusicPlayer />
-                <BottomNav />
-              </BrowserRouter>
-            </TooltipProvider>
-          </PlayerProvider>
-        </FavoritesProvider>
-      </SettingsProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <HistoryProvider>
+            <FavoritesProvider>
+              <PlayerProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <div className="flex h-screen overflow-hidden scrollbar-hide w-full">
+                      <main className="flex-1 overflow-hidden scrollbar-hide">
+                        <Routes>
+                          <Route path="/" element={<Index />} />
+                          <Route path="/search" element={<SearchPage />} />
+                          <Route path="/library" element={<LibraryPage />} />
+                          <Route path="/favorites" element={<FavoritesPage />} />
+                          <Route path="/playlist/:id" element={<PlaylistPage />} />
+                          <Route path="/settings" element={<SettingsPage />} />
+                          <Route path="/auth" element={<AuthPage />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </main>
+                    </div>
+                    <MusicPlayer />
+                    <BottomNav />
+                  </BrowserRouter>
+                </TooltipProvider>
+              </PlayerProvider>
+            </FavoritesProvider>
+          </HistoryProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

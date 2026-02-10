@@ -2,23 +2,29 @@ import { motion } from "framer-motion";
 import { Settings, Sparkles, Monitor, Brush, Volume2, Shield, Bell, ChevronRight, Check } from "lucide-react";
 import { useTheme, colorThemes } from "@/contexts/ThemeContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
+import { LogOut, User as UserIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import DesktopSidebar from "@/components/DesktopSidebar";
 
 export default function SettingsPage() {
   const { colorTheme, setColorTheme } = useTheme();
   const { dynamicBackground, setDynamicBackground } = useSettings();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen pb-32 bg-[#050505] text-white md:pl-80 transition-all duration-300">
+    <div className="min-h-screen  pb-32 bg-[#050505] text-white md:pl-80 transition-all duration-300 overflow-y-auto">
       <DesktopSidebar />
 
-      <div className="max-w-4xl mx-auto px-4 pt-8 md:pt-12">
+      <div className="max-w-4xl h-screen   mx-auto px-4 pt-8 md:pt-12">
         <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
           <Settings className="w-8 h-8 text-primary" />
           Settings
         </h1>
 
-        <div className="space-y-6">
+        <div className="space-y-6 ">
 
           {/* Appearance Section */}
           <Section title="Appearance" icon={Brush}>
@@ -72,20 +78,49 @@ export default function SettingsPage() {
                 desc="Allow seamless transitions"
                 toggle={true}
               />
-              <SettingItem
-                title="High Quality Audio"
-                desc="Stream in maximum available quality"
-                toggle={true}
-              />
+
             </div>
           </Section>
 
           {/* Account Section */}
           <Section title="Account" icon={Shield}>
-            <div className="space-y-1">
-              <SettingItem title="Profile" desc="Manage your profile details" arrow />
-              <SettingItem title="Notifications" desc="Push and email notifications" arrow />
-              <SettingItem title="Privacy" desc="Manage your data and visibility" arrow />
+            <div className="space-y-4">
+              {user ? (
+                <div className="bg-white/5 p-4 rounded-xl space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                      <UserIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">{user.user_metadata?.username || 'User'}</h3>
+                      <p className="text-sm text-gray-400">{user.email}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="w-full flex items-center gap-2"
+                    onClick={() => { signOut(); navigate('/'); }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-white/5 p-6 rounded-xl text-center space-y-4">
+                  <p className="text-gray-300">Sign in to sync your library across devices.</p>
+                  <Button
+                    className="w-full liquid-accent text-black font-semibold"
+                    onClick={() => navigate('/auth')}
+                  >
+                    Sign In / Sign Up
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <SettingItem title="Notifications" desc="Push and email notifications" arrow />
+                <SettingItem title="Privacy" desc="Manage your data and visibility" arrow />
+              </div>
             </div>
           </Section>
 
