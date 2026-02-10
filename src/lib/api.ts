@@ -4,11 +4,16 @@
 
 // Load API keys from environment variables
 const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY || "";
+const YOUTUBE_OFFICIAL_KEY = import.meta.env.VITE_YOUTUBE_API_KEY || "";
 const YOUTUBE_HOST = import.meta.env.VITE_YOUTUBE_HOST || "youtube-v31.p.rapidapi.com";
 const SHAZAM_HOST = import.meta.env.VITE_SHAZAM_HOST || "shazam-core.p.rapidapi.com";
 
 // YouTube API (Primary)
-const YOUTUBE_BASE_URL = `https://${YOUTUBE_HOST}`;
+// YouTube API (Official)
+const YOUTUBE_OFFICIAL_BASE_URL = "https://www.googleapis.com/youtube/v3";
+
+// YouTube API (RapidAPI Proxy - Fallback)
+const YOUTUBE_RAPID_BASE_URL = `https://${YOUTUBE_HOST}`;
 
 // Shazam API (Fallback)
 const SHAZAM_BASE_URL = `https://${SHAZAM_HOST}`;
@@ -22,6 +27,13 @@ const shazamHeaders = {
   "X-RapidAPI-Key": RAPIDAPI_KEY,
   "X-RapidAPI-Host": SHAZAM_HOST,
 };
+
+// ==========================================
+// Cache Configuration
+// ==========================================
+// Simple in-memory cache to prevent redundant API calls for same queries in one session
+const searchCache = new Map<string, { data: SearchTrack[], timestamp: number }>();
+const CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes cache
 
 // ==========================================
 // Types
@@ -103,47 +115,76 @@ export interface YouTubeSearchResponse {
 // YouTube API Functions
 // ==========================================
 
-export async function searchYouTube(query: string): Promise<SearchTrack[]> {
-  try {
-    const res = await fetch(
-      `${YOUTUBE_BASE_URL}/search?q=${encodeURIComponent(query)}&part=snippet&type=video&videoCategoryId=10&maxResults=12`,
-      { headers: youtubeHeaders }
-    );
+// ==========================================
+// YouTube API Strategies
+// ==========================================
 
-    if (!res.ok) {
-      console.error("YouTube API failed:", res.status);
-      throw new Error("YouTube search failed");
-    }
+// Official YouTube Data API v3 Implementation
+async function searchYouTubeOfficial(query: string): Promise<SearchTrack[]> {
+  if (!YOUTUBE_OFFICIAL_KEY) throw new Error("No official YouTube API key configured");
 
-    const data: YouTubeSearchResponse = await res.json();
+  const url = `${YOUTUBE_OFFICIAL_BASE_URL}/search?` + new URLSearchParams({
+    part: "snippet",
+    q: query,
+    type: "video",
+    videoCategoryId: "10", // Music category
+    maxResults: "12",
+    key: YOUTUBE_OFFICIAL_KEY
+  });
 
-    // Filter only videos (not channels or playlists)
-    const videos = data.items.filter(item => item.id.kind === "youtube#video");
+  const res = await fetch(url);
 
-    // Transform YouTube results to our unified SearchTrack format
-    return videos.map((item): SearchTrack => ({
-      id: item.id.videoId,
-      type: "youtube",
-      videoId: item.id.videoId,
-      channelTitle: item.snippet.channelTitle,
-      attributes: {
-        name: decodeHTMLEntities(item.snippet.title),
-        artistName: item.snippet.channelTitle,
-        albumName: "YouTube",
-        durationInMillis: 0, // YouTube doesn't provide duration in search
-        artwork: {
-          url: item.snippet.thumbnails.high.url,
-          bgColor: "#000000",
-        },
-        previews: [], // YouTube uses video embed instead
-        genreNames: ["Music"],
-        releaseDate: item.snippet.publishedAt,
-      },
-    }));
-  } catch (error) {
-    console.error("YouTube search error:", error);
-    throw error;
+  if (!res.ok) {
+    // Handle specific error codes if needed (e.g., 403 quota exceeded)
+    const errorData = await res.json().catch(() => ({}));
+    console.warn("Official YouTube API Error:", res.status, errorData);
+    throw new Error(`Official YouTube API failed: ${res.status}`);
   }
+
+  const data: YouTubeSearchResponse = await res.json();
+  return transformYouTubeResults(data);
+}
+
+// RapidAPI YouTube Proxy Implementation (Fallback)
+async function searchYouTubeRapid(query: string): Promise<SearchTrack[]> {
+  const res = await fetch(
+    `${YOUTUBE_RAPID_BASE_URL}/search?q=${encodeURIComponent(query)}&part=snippet&type=video&videoCategoryId=10&maxResults=12`,
+    { headers: youtubeHeaders }
+  );
+
+  if (!res.ok) {
+    console.error("RapidAPI YouTube proxy failed:", res.status);
+    throw new Error("RapidAPI YouTube search failed");
+  }
+
+  const data: YouTubeSearchResponse = await res.json();
+  return transformYouTubeResults(data);
+}
+
+// Shared transformer for both API responses
+function transformYouTubeResults(data: YouTubeSearchResponse): SearchTrack[] {
+  // Filter only videos (not channels or playlists)
+  const videos = data.items.filter(item => item.id.kind === "youtube#video");
+
+  return videos.map((item): SearchTrack => ({
+    id: item.id.videoId,
+    type: "youtube",
+    videoId: item.id.videoId,
+    channelTitle: item.snippet.channelTitle,
+    attributes: {
+      name: decodeHTMLEntities(item.snippet.title),
+      artistName: item.snippet.channelTitle,
+      albumName: "YouTube",
+      durationInMillis: 0, // YouTube search doesn't provide duration
+      artwork: {
+        url: item.snippet.thumbnails.high.url,
+        bgColor: "#000000",
+      },
+      previews: [], // YouTube uses video embed instead
+      genreNames: ["Music"],
+      releaseDate: item.snippet.publishedAt,
+    },
+  }));
 }
 
 // Helper to decode HTML entities in titles
@@ -189,28 +230,64 @@ export async function getTrackDetails(trackId: string): Promise<TrackDetail> {
 // ==========================================
 
 export async function searchTracks(query: string): Promise<SearchTrack[]> {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  // 1. Check Cache First (The most effective way to save credits)
+  const cached = searchCache.get(normalizedQuery);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_EXPIRY) {
+    console.log("Using cached results for:", normalizedQuery);
+    return cached.data;
+  }
+
   console.log("Searching for:", query);
 
-  // Try YouTube first (primary source)
+  let results: SearchTrack[] = [];
+
+  // API Strategy: Official -> RapidAPI -> Shazam
+  // This implements a failover mechanism to prioritize free/official quota over paid/proxied quota
+
+  // 1. Try Official YouTube API
   try {
-    const youtubeResults = await searchYouTube(query);
-    if (youtubeResults.length > 0) {
-      console.log("Using YouTube results:", youtubeResults.length, "tracks");
-      return youtubeResults;
+    console.log("Attempting search via Official YouTube API...");
+    results = await searchYouTubeOfficial(query);
+    if (results.length > 0) {
+      console.log("Using Official YouTube results:", results.length, "tracks");
     }
   } catch (error) {
-    console.warn("YouTube API failed, falling back to Shazam:", error);
+    console.warn("Official YouTube API failed, failing over to RapidAPI proxy...", error);
   }
 
-  // Fallback to Shazam if YouTube fails or returns no results
-  try {
-    const shazamResults = await searchShazam(query);
-    console.log("Using Shazam fallback:", shazamResults.length, "tracks");
-    return shazamResults;
-  } catch (error) {
-    console.error("Both APIs failed:", error);
-    throw new Error("Search failed - please try again later");
+  // 2. Fallback to RapidAPI YouTube Proxy
+  if (results.length === 0) {
+    try {
+      console.log("Attempting search via RapidAPI YouTube Proxy...");
+      results = await searchYouTubeRapid(query);
+      if (results.length > 0) {
+        console.log("Using RapidAPI results:", results.length, "tracks");
+      }
+    } catch (error) {
+      console.warn("RapidAPI YouTube proxy failed, failing over to Shazam...", error);
+    }
   }
+
+  // 3. Fallback to Shazam if YouTube fails or returns no results
+  if (results.length === 0) {
+    try {
+      const shazamResults = await searchShazam(query);
+      console.log("Using Shazam fallback:", shazamResults.length, "tracks");
+      results = shazamResults;
+    } catch (error) {
+      console.error("Both APIs failed:", error);
+      throw new Error("Search failed - please try again later");
+    }
+  }
+
+  // Save to cache before returning
+  if (results.length > 0) {
+    searchCache.set(normalizedQuery, { data: results, timestamp: Date.now() });
+  }
+
+  return results;
 }
 
 // ==========================================

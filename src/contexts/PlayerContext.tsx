@@ -10,7 +10,22 @@ interface PlayerState {
   queue: SearchTrack[];
   isYouTube: boolean;
   videoId: string | null;
+  volume: number; // Added volume to state
 }
+
+const PLAYER_STORAGE_KEY = "sonicflow_player_state";
+
+const DEFAULT_STATE: PlayerState = {
+  currentTrack: null,
+  isPlaying: false,
+  currentTime: 0,
+  duration: 0,
+  audioUrl: null,
+  queue: [],
+  isYouTube: false,
+  videoId: null,
+  volume: 1,
+};
 
 interface PlayerContextType extends PlayerState {
   playTrack: (track: SearchTrack) => void;
@@ -19,6 +34,7 @@ interface PlayerContextType extends PlayerState {
   nextTrack: () => void;
   prevTrack: () => void;
   addToQueue: (tracks: SearchTrack[]) => void;
+  setVolume: (volume: number) => void;
   coverArtUrl: string | null;
   youtubePlayerRef: MutableRefObject<HTMLIFrameElement | null>;
   onYouTubeStateChange: (state: number) => void;
@@ -37,16 +53,61 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const youtubePlayerRef = useRef<HTMLIFrameElement | null>(null);
 
-  const [state, setState] = useState<PlayerState>({
-    currentTrack: null,
-    isPlaying: false,
-    currentTime: 0,
-    duration: 0,
-    audioUrl: null,
-    queue: [],
-    isYouTube: false,
-    videoId: null,
+  const [state, setState] = useState<PlayerState>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(PLAYER_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            ...DEFAULT_STATE,
+            ...parsed,
+            isPlaying: false, // Always start paused
+            audioUrl: null,   // URL needs to be refreshed/generated
+            currentTime: parsed.currentTime || 0,
+          };
+        }
+      } catch (e) {
+        console.error("Failed to load player state:", e);
+      }
+    }
+    return DEFAULT_STATE;
   });
+
+  // Save state to localStorage whenever relevant fields change
+  useEffect(() => {
+    const stateToSave = {
+      currentTrack: state.currentTrack,
+      queue: state.queue,
+      currentTime: state.currentTime,
+      isYouTube: state.isYouTube,
+      videoId: state.videoId,
+      volume: state.volume,
+    };
+    localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [state.currentTrack, state.queue, state.isYouTube, state.videoId, state.volume]);
+
+  // Debounced save for time (optional optimization, but simple effect is okay for now if not too frequent)
+  // We can just rely on the above effect, but let's exclude currentTime from the dependency array above
+  // and make a separate effect for it if we want to save it on unload/pause
+
+  // Re-save time on pause or unload
+  useEffect(() => {
+    const handleUnload = () => {
+      const stateToSave = {
+        currentTrack: state.currentTrack,
+        queue: state.queue,
+        currentTime: state.currentTime,
+        isYouTube: state.isYouTube,
+        videoId: state.videoId,
+        volume: state.volume,
+      };
+      localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(stateToSave));
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [state]);
 
   // Initialize audio element for Shazam tracks
   useEffect(() => {
@@ -203,6 +264,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         nextTrack,
         prevTrack,
         addToQueue,
+        setVolume: (vol) => {
+          if (audioRef.current) audioRef.current.volume = vol;
+          setState(s => ({ ...s, volume: vol }));
+        },
         coverArtUrl,
         youtubePlayerRef,
         onYouTubeStateChange,

@@ -309,10 +309,10 @@ export default function MusicPlayer() {
             </button>
           </div>
           <div className="flex flex-col min-w-0">
-            <h4 className="text-sm font-semibold text-white hover:text-primary cursor-pointer transition-colors truncate">
+            <h4 className="text-sm hidden md:flex font-semibold text-white hover:text-primary cursor-pointer transition-colors truncate">
               {String(name).slice(0, 25)}
             </h4>
-            <p className="text-[11px] text-soft hover:text-white cursor-pointer transition-colors truncate">
+            <p className="text-[11px] hidden md:inline text-soft hover:text-white cursor-pointer transition-colors truncate">
               {artistName} • {albumName}
             </p>
           </div>
@@ -359,7 +359,7 @@ export default function MusicPlayer() {
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full flex items-center gap-3 text-[10px] text-soft font-medium">
+          <div className="hidden md:flex w-full items-center gap-3 text-[10px] text-soft font-medium">
             <span className="w-8 text-right">{formatTime(displayCurrentTime)}</span>
             <div
               className="flex-1 h-1.5 bg-white/5 rounded-full cursor-pointer relative group"

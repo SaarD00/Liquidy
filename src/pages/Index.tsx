@@ -67,7 +67,7 @@ export default function HomePage() {
   const upNextTracks = queue.slice(1, 7);
 
   return (
-    <div className="min-h-screen w-full bg-[#050505] text-white overflow-hidden flex flex-col antialiased selection:bg-primary selection:text-black">
+    <div className="min-h-screen w-full bg-[#050505] text-white overflow-hidden scrollbar-hide flex flex-col antialiased selection:bg-primary selection:text-black">
 
       {/* Header */}
       <header className="h-20 flex items-center justify-between px-4 md:px-8 z-30 relative pl-0 md:pl-80">
@@ -129,10 +129,10 @@ export default function HomePage() {
       <DesktopSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex overflow-hidden px-4 pb-28 gap-4 z-10 relative pl-0 md:pl-80">
+      <main className="flex-1 flex md:overflow-hidden  px-4 pb-28 gap-4 z-10 relative pl-0 md:pl-80">
 
         {/* Center Content */}
-        <section className="flex-1 glass-panel rounded-2xl flex flex-col relative overflow-hidden">
+        <section className="flex-1 glass-panel rounded-2xl overflow-scroll md:h-[73vh] scrollbar-hide flex flex-col relative overflow-hidden">
           {/* Emerald Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
 
@@ -144,7 +144,7 @@ export default function HomePage() {
 
             {/* Quick Access Grid - When no search */}
             {!searched && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+              <div className="grid hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
                 {QUICK_PICKS.slice(0, 3).map((pick) => (
                   <motion.div
                     key={pick.name}
@@ -152,10 +152,10 @@ export default function HomePage() {
                     onClick={() => handleQuickPick(pick.query)}
                     className="group flex items-center bg-white/5 hover:bg-white/10 rounded-xl overflow-hidden transition-all border border-white/5 cursor-pointer"
                   >
-                    <div className="w-20 h-20 bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center">
-                      <Music2 className="w-8 h-8 text-primary" />
+                    <div className="w-12 h-12 md:w-20 md:h-20 bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center">
+                      <Music2 className="w-5 h-5 md:w-8 md:h-8 text-primary" />
                     </div>
-                    <span className="ml-4 font-bold text-white text-sm">{pick.name}</span>
+                    <span className="ml-4 font-bold text-white text-sm hidden md:block">{pick.name}</span>
                     <div className="ml-auto mr-4 w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
                       <Play className="w-5 h-5 text-black fill-black" />
                     </div>
@@ -246,8 +246,8 @@ export default function HomePage() {
         </section>
 
         {/* Right Panel - Queue */}
-        <aside className="hidden xl:flex w-72 flex-col gap-4">
-          <div className="glass-panel rounded-2xl h-full flex flex-col overflow-hidden">
+        <aside className="hidden xl:flex w-72 h-[94vh]  flex-col gap-4">
+          <div className="glass-panel rounded-2xl overflow-hidden scrollbar-hide h-[77%] flex flex-col overflow-hidden">
             {/* Queue Header */}
             <div className="p-6 border-b border-white/5">
               <div className="flex items-center justify-between mb-2">
@@ -262,7 +262,7 @@ export default function HomePage() {
             </div>
 
             {/* Queue Items */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-scroll scrollbar-hide p-2 space-y-1">
               {/* Currently Playing */}
               {currentTrack && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 group cursor-default">

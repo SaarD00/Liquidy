@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Library, Play, Plus, Music, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useFavorites } from "@/contexts/FavoritesContext";
@@ -5,6 +6,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { getArtworkUrl } from "@/lib/api";
 
 export default function LibraryPage() {
+  const navigate = useNavigate();
   const { playlists, likedSongs, createPlaylist } = useFavorites();
   const { playTrack, addToQueue, queue } = usePlayer();
 
@@ -123,7 +125,7 @@ export default function LibraryPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   className="track-card group cursor-pointer"
-                  onClick={() => playlist.tracks.length > 0 && (addToQueue(playlist.tracks), playTrack(playlist.tracks[0]))}
+                  onClick={() => navigate(`/playlist/${playlist.id}`)}
                 >
                   <div className="relative aspect-square bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center">
                     {playlist.tracks.length > 0 ? (

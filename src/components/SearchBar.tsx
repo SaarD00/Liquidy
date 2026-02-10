@@ -21,7 +21,7 @@ export default function SearchBar({ onSearch, isLoading, live = false }: SearchB
   );
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-xl">
+    <form onSubmit={handleSubmit} className="w-full max-w-2xl">
       <div className="relative group">
         {/* Search Icon */}
         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">

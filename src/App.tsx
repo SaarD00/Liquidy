@@ -31,8 +31,8 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <div className="flex min-h-screen w-full">
-                  <main className="flex-1">
+                <div className="flex h-screen overflow-hidden scrollbar-hide w-full">
+                  <main className="flex-1 overflow-hidden scrollbar-hide">
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/search" element={<SearchPage />} />

@@ -15,7 +15,7 @@ export default function UpNext() {
         : queue;
 
     return (
-        <div className="glass-panel rounded-2xl h-full flex flex-col overflow-hidden border border-white/5">
+        <div className="glass-panel md:h-[73%] rounded-2xl h-full flex flex-col overflow-hidden border border-white/5">
             {/* Queue Header */}
             <div className="p-6 border-b border-white/5">
                 <div className="flex items-center justify-between mb-2">
