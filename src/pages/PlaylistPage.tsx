@@ -8,7 +8,7 @@ import PlaylistView from "@/components/PlaylistView";
 export default function PlaylistPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { playlists, deletePlaylist, renamePlaylist } = useFavorites();
+    const { playlists, deletePlaylist, renamePlaylist, reorderPlaylist, removeFromPlaylist } = useFavorites();
 
     const playlist = useMemo(() =>
         playlists.find((p) => p.id === id),
@@ -62,6 +62,8 @@ export default function PlaylistPage() {
                 isDeletable={true}
                 onRename={handleRename}
                 onDelete={handleDelete}
+                onReorder={(start, end) => reorderPlaylist(playlist.id, start, end)}
+                onRemoveTrack={(trackId) => removeFromPlaylist(playlist.id, trackId)}
             />
         </div>
     );

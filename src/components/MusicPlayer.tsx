@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, SkipBack, SkipForward, Heart, ChevronDown, MoreHorizontal, Shuffle, Repeat, Volume2, Mic2, ListMusic, Maximize2, ListPlus } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Heart, ChevronDown, MoreHorizontal, Shuffle, Repeat, Volume2, Mic2, ListMusic, Maximize2, ListPlus, Plus } from "lucide-react";
 import { usePlayer } from "@/contexts/PlayerContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { formatTime, getArtworkUrl, isYouTubeTrack } from "@/lib/api";
+
+import YouTubePlayer from "./YouTubePlayer";
 import { useState, useRef, useEffect, useCallback } from "react";
 
 // Default duration for YouTube videos (3.5 minutes) - will update as video plays
@@ -24,23 +26,28 @@ const DEFAULT_YOUTUBE_DURATION = 210;
 export default function MusicPlayer() {
   const {
     currentTrack, isPlaying, togglePlay, currentTime, duration,
-    seekTo, nextTrack, prevTrack, coverArtUrl, isYouTube, videoId
+    seekTo, nextTrack, prevTrack, coverArtUrl, isYouTube, videoId,
+    setVolume: setContextVolume, volume: contextVolume
   } = usePlayer();
-  const { isLiked, toggleLike, playlists, addToPlaylist } = useFavorites();
+  const { isLiked, toggleLike, playlists, addToPlaylist, createPlaylist } = useFavorites();
   const { setCustomTheme, resetTheme } = useTheme();
   const { dynamicBackground } = useSettings();
   const { addToHistory } = useHistory();
 
   const [expanded, setExpanded] = useState(false);
   const [volume, setVolume] = useState(80);
+  // Sync volume to context
+  useEffect(() => {
+    if (contextVolume !== undefined) {
+      setVolume(contextVolume * 100);
+    }
+  }, [contextVolume]);
 
-  // Track playback time for YouTube
-  const [ytCurrentTime, setYtCurrentTime] = useState(0);
-  const [ytDuration, setYtDuration] = useState(DEFAULT_YOUTUBE_DURATION);
-  const playStartTimeRef = useRef<number | null>(null);
-  const savedTimeRef = useRef(0);
-  const lastVideoIdRef = useRef<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    setContextVolume(newVolume / 100);
+  };
+
 
   const isYouTubeVideo = currentTrack ? isYouTubeTrack(currentTrack) : false;
 
@@ -65,74 +72,14 @@ export default function MusicPlayer() {
     }
   }, [currentTrack, dynamicBackground, setCustomTheme, resetTheme, addToHistory]);
 
-
-  // Reset when video changes
-  useEffect(() => {
-    if (videoId && videoId !== lastVideoIdRef.current) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setYtCurrentTime(0);
-      setYtDuration(DEFAULT_YOUTUBE_DURATION);
-      savedTimeRef.current = 0;
-      playStartTimeRef.current = null;
-      lastVideoIdRef.current = videoId;
-    }
-  }, [videoId]);
-
-  // Real-time progress tracking for YouTube
-  useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    if (isYouTubeVideo && isPlaying && videoId) {
-      playStartTimeRef.current = Date.now();
-      intervalRef.current = setInterval(() => {
-        if (playStartTimeRef.current) {
-          const elapsedSincePlay = (Date.now() - playStartTimeRef.current) / 1000;
-          const totalTime = savedTimeRef.current + elapsedSincePlay;
-          setYtCurrentTime(totalTime);
-        }
-      }, 500);
-    } else if (isYouTubeVideo && !isPlaying) {
-      if (playStartTimeRef.current) {
-        const elapsedSincePlay = (Date.now() - playStartTimeRef.current) / 1000;
-        savedTimeRef.current = savedTimeRef.current + elapsedSincePlay;
-        playStartTimeRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isPlaying, isYouTubeVideo, videoId]);
-
-  // Handle seeking for YouTube
-  const handleYouTubeSeek = useCallback((seekTime: number) => {
-    savedTimeRef.current = seekTime;
-    setYtCurrentTime(seekTime);
-    if (isPlaying) {
-      playStartTimeRef.current = Date.now();
-    }
-    if (isPlaying) {
-      togglePlay();
-      setTimeout(() => togglePlay(), 50);
-    }
-  }, [isPlaying, togglePlay]);
-
   if (!currentTrack) return null;
 
   const { name, artistName, albumName } = currentTrack.attributes;
   const liked = isLiked(currentTrack.id);
 
   // Use YouTube time tracking for YouTube videos, otherwise use context values
-  const displayCurrentTime = isYouTubeVideo ? ytCurrentTime : currentTime;
-  const displayDuration = isYouTubeVideo ? ytDuration : duration;
+  const displayCurrentTime = currentTime;
+  const displayDuration = duration || (isYouTubeVideo ? DEFAULT_YOUTUBE_DURATION : 0);
   const progress = displayDuration > 0 ? (displayCurrentTime / displayDuration) * 100 : 0;
 
   // Handle progress bar click for seeking
@@ -141,43 +88,16 @@ export default function MusicPlayer() {
     const pct = (e.clientX - rect.left) / rect.width;
     const seekTime = pct * displayDuration;
 
-    if (isYouTubeVideo) {
-      handleYouTubeSeek(seekTime);
-    } else {
-      seekTo(seekTime);
-    }
+    seekTo(seekTime);
   };
 
-  // YouTube embed URL with start time for resume
-  const startSeconds = Math.floor(savedTimeRef.current);
-  const youtubeEmbedUrl = videoId
-    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0&playsinline=1&start=${startSeconds}`
-    : null;
+
 
   return (
     <>
       {/* Hidden YouTube Player */}
-      {isYouTubeVideo && videoId && youtubeEmbedUrl && isPlaying && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '-9999px',
-            left: '-9999px',
-            width: '640px',
-            height: '360px',
-            pointerEvents: 'none',
-          }}
-        >
-          <iframe
-            key={`${videoId}-${startSeconds}`}
-            src={youtubeEmbedUrl}
-            title="YouTube audio player"
-            width="640"
-            height="360"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            style={{ border: 'none' }}
-          />
-        </div>
+      {isYouTubeVideo && videoId && (
+        <YouTubePlayer videoId={videoId} />
       )}
 
       {/* Expanded Full-Screen Player */}
@@ -251,9 +171,49 @@ export default function MusicPlayer() {
                   <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 truncate">{String(name).slice(0, 32)}</h2>
                   <p className="text-lg text-primary/70 truncate">{artistName}</p>
                 </div>
-                <button onClick={() => toggleLike(currentTrack)} className="mb-2 ml-4 flex-shrink-0">
-                  <Heart className={`w-7 h-7 ${liked ? 'fill-primary text-primary' : 'text-white/50 hover:text-white'}`} />
-                </button>
+                <div className="flex items-center gap-4">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="mb-2 flex-shrink-0">
+                        <ListPlus className="w-7 h-7 text-white/50 hover:text-white transition-colors" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 bg-[#1a1a1a] border-white/10 z-[1000] text-white" align="end" side="top">
+                      <DropdownMenuLabel>Add to Playlist</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-white/10" />
+                      {playlists.map((playlist) => (
+                        <DropdownMenuItem
+                          key={playlist.id}
+                          className="focus:bg-white/10 cursor-pointer"
+                          onClick={() => {
+                            addToPlaylist(playlist.id, currentTrack);
+                            toast.success(`Added to ${playlist.name}`);
+                          }}
+                        >
+                          <ListMusic className="mr-2 h-4 w-4" />
+                          <span>{playlist.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator className="bg-white/10" />
+                      <DropdownMenuItem
+                        className="focus:bg-white/10 cursor-pointer text-primary focus:text-primary"
+                        onClick={() => {
+                          const name = `My Playlist #${playlists.length + 1}`;
+                          const newPlaylist = createPlaylist(name);
+                          addToPlaylist(newPlaylist.id, currentTrack);
+                          toast.success(`Created ${name} and added track`);
+                        }}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        <span>Create New Playlist</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <button onClick={() => toggleLike(currentTrack)} className="mb-2 flex-shrink-0">
+                    <Heart className={`w-7 h-7 ${liked ? 'fill-primary text-primary' : 'text-white/50 hover:text-white'}`} />
+                  </button>
+                </div>
               </div>
 
               {/* Progress Bar */}
@@ -399,7 +359,7 @@ export default function MusicPlayer() {
                 <ListPlus className="w-5 h-5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-[#0a0a0a] border-white/10 text-white" align="end" side="top">
+            <DropdownMenuContent className="w-56 bg-[#0a0a0a]  border-white/10 text-white" align="end" side="top">
               <DropdownMenuLabel>Add to Playlist</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/10" />
               {playlists.length === 0 ? (
@@ -436,7 +396,7 @@ export default function MusicPlayer() {
                 min="0"
                 max="100"
                 value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
+                onChange={(e) => handleVolumeChange(Number(e.target.value))}
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onClick={(e) => e.stopPropagation()}
               />
