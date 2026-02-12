@@ -20,6 +20,7 @@ interface FavoritesContextType {
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   deletePlaylist: (playlistId: string) => void;
   renamePlaylist: (playlistId: string, newName: string) => void;
+  reorderPlaylist: (playlistId: string, startIndex: number, endIndex: number) => void;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | null>(null);
@@ -91,20 +92,73 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     fetchData();
   }, [user]);
 
-  // Sync to Supabase on Change
+  // Realtime Sync Subscription
   useEffect(() => {
     if (!user) return;
 
-    const timeout = setTimeout(async () => {
-      await supabase.from('user_data').upsert({
-        user_id: user.id,
-        favorites: likedSongs,
-        playlists: playlists
-      });
-    }, 2000);
+    const channel = supabase
+      .channel('user_data_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_data',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newData = payload.new as any;
+          if (newData) {
+            if (newData.favorites && Array.isArray(newData.favorites)) {
+              setLikedSongs(prev => {
+                // Merge remote with local to avoid lost updates, but generally trust remote for simple sync
+                // Here we just take remote as truth if we want full sync, or merge.
+                // Let's merge unique IDs, preferring remote?
+                // Actually, if phone added something, we want it here.
+                const localIds = new Set(prev.map(t => t.id));
+                const newItems = newData.favorites.filter((t: SearchTrack) => !localIds.has(t.id));
+                return [...prev, ...newItems];
+              });
+            }
+            if (newData.playlists && Array.isArray(newData.playlists)) {
+              setPlaylists(prev => {
+                const localIds = new Set(prev.map(p => p.id));
+                const newItems = newData.playlists.filter((p: Playlist) => !localIds.has(p.id));
+                // Also update existing playlists if tracks changed?
+                // This simple merge only adds new playlists. We need to update existing ones too.
+                // Let's rebuild the list using remote data for existing IDs + new ones.
+                const remoteMap = new Map(newData.playlists.map((p: Playlist) => [p.id, p]));
 
-    return () => clearTimeout(timeout);
-  }, [likedSongs, playlists, user]);
+                const updatedPrev = prev.map(p => remoteMap.has(p.id) ? remoteMap.get(p.id)! : p);
+                const trulyNew = newData.playlists.filter((p: Playlist) => !localIds.has(p.id));
+
+                return [...updatedPrev, ...trulyNew];
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Helper to save to Supabase
+  const persistData = async (currentLikes: SearchTrack[], currentPlaylists: Playlist[]) => {
+    if (!user) return;
+    await supabase.from('user_data').upsert({
+      user_id: user.id,
+      favorites: currentLikes,
+      playlists: currentPlaylists
+    });
+  };
+
+  // --------------------------------------------------------
+  // MODIFIERS - Each calls persistData explicitly
+  // --------------------------------------------------------
+
 
 
   const isLiked = useCallback((trackId: string) => {
@@ -112,64 +166,109 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   }, [likedSongs]);
 
   const toggleLike = useCallback((track: SearchTrack) => {
+    // Optimistic update
+    let newLikes: SearchTrack[] = [];
+
     setLikedSongs((prev) => {
       const exists = prev.some((t) => t.id === track.id);
       if (exists) {
-        return prev.filter((t) => t.id !== track.id);
+        newLikes = prev.filter((t) => t.id !== track.id);
+        toast.success("Removed from Favorites");
+      } else {
+        newLikes = [...prev, track];
+        toast.success("Added to Favorites");
       }
-      return [track, ...prev];
+      return newLikes;
     });
-  }, []);
+
+    // Save
+    persistData(newLikes, playlists);
+  }, [playlists, user]);
 
   const createPlaylist = useCallback((name: string) => {
     const newPlaylist: Playlist = {
-      id: `playlist_${Date.now()}`,
+      id: crypto.randomUUID(),
       name,
       tracks: [],
       createdAt: Date.now(),
     };
-    setPlaylists((prev) => [...prev, newPlaylist]);
+
+    const newPlaylists = [...playlists, newPlaylist];
+    setPlaylists(newPlaylists);
+    persistData(likedSongs, newPlaylists);
+
     return newPlaylist;
-  }, []);
+  }, [playlists, likedSongs, user]);
 
   const addToPlaylist = useCallback((playlistId: string, track: SearchTrack) => {
-    setPlaylists((prev) =>
-      prev.map((p) => {
+    let updatedPlaylists = [...playlists];
+
+    setPlaylists((prev) => {
+      updatedPlaylists = prev.map((p) => {
         if (p.id === playlistId) {
-          const exists = p.tracks.some((t) => t.id === track.id);
-          if (exists) return p;
+          // Check dupe
+          if (p.tracks.some(t => t.id === track.id)) return p;
           return { ...p, tracks: [...p.tracks, track] };
         }
         return p;
-      })
-    );
-  }, []);
+      });
+      return updatedPlaylists;
+    });
+
+    persistData(likedSongs, updatedPlaylists);
+  }, [playlists, likedSongs, user]);
 
   const removeFromPlaylist = useCallback((playlistId: string, trackId: string) => {
-    setPlaylists((prev) =>
-      prev.map((p) => {
+    let updatedPlaylists = [...playlists];
+
+    setPlaylists((prev) => {
+      updatedPlaylists = prev.map((p) => {
         if (p.id === playlistId) {
           return { ...p, tracks: p.tracks.filter((t) => t.id !== trackId) };
         }
         return p;
-      })
-    );
-  }, []);
+      });
+      return updatedPlaylists;
+    });
+
+    persistData(likedSongs, updatedPlaylists);
+  }, [playlists, likedSongs, user]);
 
   const deletePlaylist = useCallback((playlistId: string) => {
-    setPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
-  }, []);
+    const updatedPlaylists = playlists.filter((p) => p.id !== playlistId);
+    setPlaylists(updatedPlaylists);
+    persistData(likedSongs, updatedPlaylists);
+  }, [playlists, likedSongs, user]);
 
   const renamePlaylist = useCallback((playlistId: string, newName: string) => {
-    setPlaylists((prev) =>
-      prev.map((p) => {
-        if (p.id === playlistId) {
-          return { ...p, name: newName };
-        }
-        return p;
-      })
+    const updatedPlaylists = playlists.map((p) =>
+      p.id === playlistId ? { ...p, name: newName } : p
     );
-  }, []);
+    setPlaylists(updatedPlaylists);
+    persistData(likedSongs, updatedPlaylists);
+  }, [playlists, likedSongs, user]);
+
+  const reorderPlaylist = useCallback((playlistId: string, startIndex: number, endIndex: number) => {
+    let updatedPlaylists = [...playlists];
+
+    setPlaylists((prev) => {
+      updatedPlaylists = prev.map((playlist) => {
+        if (playlist.id !== playlistId) return playlist;
+
+        const newTracks = [...playlist.tracks];
+        const [movedTrack] = newTracks.splice(startIndex, 1);
+        newTracks.splice(endIndex, 0, movedTrack);
+
+        return {
+          ...playlist,
+          tracks: newTracks
+        };
+      });
+      return updatedPlaylists;
+    });
+
+    persistData(likedSongs, updatedPlaylists);
+  }, [playlists, likedSongs, user]);
 
   return (
     <FavoritesContext.Provider
@@ -183,6 +282,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         removeFromPlaylist,
         deletePlaylist,
         renamePlaylist,
+        reorderPlaylist,
       }}
     >
       {children}
