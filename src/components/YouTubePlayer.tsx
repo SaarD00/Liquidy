@@ -1,88 +1,133 @@
+
 import { useEffect, useRef, useCallback } from "react";
+import YouTube, { YouTubeProps } from "react-youtube";
 import { usePlayer } from "@/contexts/PlayerContext";
-import { getYouTubeEmbedUrl } from "@/lib/api";
 
 interface YouTubePlayerProps {
     videoId: string;
-    autoPlay?: boolean;
     className?: string;
-    onReady?: () => void;
 }
 
 export default function YouTubePlayer({
     videoId,
-    autoPlay = true,
     className = "",
-    onReady,
 }: YouTubePlayerProps) {
-    const iframeRef = useRef<HTMLIFrameElement>(null);
-    const { youtubePlayerRef, onYouTubeStateChange, onYouTubeTimeUpdate, isPlaying } = usePlayer();
-    const intervalRef = useRef<number | null>(null);
+    const {
+        youtubePlayerRef,
+        onYouTubeStateChange,
+        onYouTubeTimeUpdate,
+        isPlaying,
+        volume,
+        seekTo
+    } = usePlayer();
 
-    // Listen for YouTube player messages
+    const internalPlayerRef = useRef<any>(null);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Sync volume when it changes
+    // Sync volume when it changes
     useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            if (event.origin !== "https://www.youtube.com") return;
-
-            try {
-                const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
-                if (data.event === "onStateChange") {
-                    onYouTubeStateChange(data.info);
-                }
-
-                if (data.event === "infoDelivery" && data.info) {
-                    if (data.info.currentTime !== undefined && data.info.duration !== undefined) {
-                        onYouTubeTimeUpdate(data.info.currentTime, data.info.duration);
-                    }
-                }
-
-                if (data.event === "onReady") {
-                    onReady?.();
-                }
-            } catch {
-                // Ignore parse errors from other messages
-            }
-        };
-
-        window.addEventListener("message", handleMessage);
-        return () => window.removeEventListener("message", handleMessage);
-    }, [onYouTubeStateChange, onYouTubeTimeUpdate, onReady]);
-
-    // Sync ref with context
-    useEffect(() => {
-        if (iframeRef.current && youtubePlayerRef) {
-            (youtubePlayerRef as React.MutableRefObject<HTMLIFrameElement | null>).current = iframeRef.current;
+        if (internalPlayerRef.current) {
+            // YouTube expects 0-100, context provides 0-1
+            internalPlayerRef.current.setVolume(volume * 100);
         }
-    }, [youtubePlayerRef, videoId]);
+    }, [volume]);
 
-    // Build embed URL with all necessary parameters
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?${new URLSearchParams({
-        autoplay: autoPlay ? "1" : "0",
-        enablejsapi: "1",
-        modestbranding: "1",
-        rel: "0",
-        playsinline: "1",
-        origin: window.location.origin,
-        widget_referrer: window.location.origin,
-    }).toString()}`;
+    // Handle play/pause sync from context
+    useEffect(() => {
+        if (internalPlayerRef.current) {
+            if (isPlaying) {
+                internalPlayerRef.current.playVideo();
+            } else {
+                internalPlayerRef.current.pauseVideo();
+            }
+        }
+    }, [isPlaying]);
+
+    const onReady: YouTubeProps['onReady'] = (event) => {
+        internalPlayerRef.current = event.target;
+        // Sync context ref
+        if (youtubePlayerRef) {
+            youtubePlayerRef.current = event.target;
+        }
+
+        // precise volume sync
+        event.target.setVolume(volume * 100);
+
+        if (isPlaying) {
+            event.target.playVideo();
+        }
+    };
+
+    const onStateChange: YouTubeProps['onStateChange'] = (event) => {
+        // -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued).
+        const playerState = event.data;
+        onYouTubeStateChange(playerState);
+
+        if (playerState === 1) { // Playing
+            startPolling();
+        } else {
+            stopPolling();
+        }
+    };
+
+    const startPolling = useCallback(() => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(() => {
+            if (internalPlayerRef.current) {
+                const currentTime = internalPlayerRef.current.getCurrentTime();
+                const duration = internalPlayerRef.current.getDuration();
+                onYouTubeTimeUpdate(currentTime, duration);
+            }
+        }, 1000); // Update every second to match UI
+    }, [onYouTubeTimeUpdate]);
+
+    const stopPolling = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+    }, []);
+
+    // Cleanup
+    useEffect(() => {
+        return () => stopPolling();
+    }, [stopPolling]);
+
+    const opts: YouTubeProps['opts'] = {
+        height: '100%',
+        width: '100%',
+        playerVars: {
+            // https://developers.google.com/youtube/player_parameters
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+        },
+    };
 
     return (
-        <div className={` w-full aspect-video bg-black rounded-2xl overflow-hidden ${className}`}>
-            <iframe
-                ref={iframeRef}
-                src={embedUrl}
-                title="YouTube video player"
-                className="absolute inset-0 "
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                frameBorder="0"
+        <div
+            className={`video-container ${className}`}
+            style={{
+                position: 'fixed',
+                top: '-9999px',
+                left: '-9999px',
+                width: '1px',
+                height: '1px',
+                pointerEvents: 'none',
+                opacity: 0
+            }}
+        >
+            <YouTube
+                videoId={videoId}
+                opts={opts}
+                onReady={onReady}
+                onStateChange={onStateChange}
+                onEnd={() => onYouTubeStateChange(0)}
             />
-
-            {/* Loading overlay */}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none opacity-0 transition-opacity duration-300">
-                <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-            </div>
         </div>
     );
 }

@@ -4,7 +4,7 @@ import { usePlayer } from "@/contexts/PlayerContext";
 import { getArtworkUrl, formatDuration } from "@/lib/api";
 
 export default function UpNext() {
-    const { queue, currentTrack, playTrack, isPlaying } = usePlayer();
+    const { queue, currentTrack, playTrack, isPlaying, clearQueue } = usePlayer();
 
     const currentIndex = currentTrack
         ? queue.findIndex(t => t.id === currentTrack.id)
@@ -20,8 +20,11 @@ export default function UpNext() {
             <div className="p-6 border-b border-white/5">
                 <div className="flex items-center justify-between mb-2">
                     <h3 className="font-bold text-white text-base">Up Next</h3>
-                    <button className="text-gray-400 hover:text-white transition-colors">
-                        <MoreHorizontal className="w-5 h-5" />
+                    <button
+                        onClick={clearQueue}
+                        className="text-xs text-red-400 hover:text-red-300 transition-colors uppercase font-bold tracking-wider"
+                    >
+                        Clear Queue
                     </button>
                 </div>
                 <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">

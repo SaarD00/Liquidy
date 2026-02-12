@@ -39,7 +39,7 @@ export default function HomePage() {
   const [tracks, setTracks] = useState<SearchTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const { playTrack, currentTrack, isPlaying, addToQueue, queue } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, addToQueue, queue, clearQueue } = usePlayer();
   const { isLiked, toggleLike } = useFavorites();
   const { dynamicBackground } = useSettings();
   const navigate = useNavigate();
@@ -332,8 +332,11 @@ export default function HomePage() {
             {/* Queue Footer */}
             {queue.length > 0 && (
               <div className="p-4 bg-white/[0.02] border-t border-white/5">
-                <button className="w-full py-2.5 rounded-xl border border-white/10 text-[11px] font-bold text-white hover:bg-white/5 transition-all uppercase tracking-widest">
-                  Open Full Queue
+                <button
+                  onClick={clearQueue}
+                  className="w-full py-2.5 rounded-xl border border-red-500/30 text-[11px] font-bold text-red-400 hover:bg-red-500/10 transition-all uppercase tracking-widest"
+                >
+                  Erase Queue
                 </button>
               </div>
             )}
