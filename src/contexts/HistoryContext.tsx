@@ -79,7 +79,7 @@ export function HistoryProvider({ children }: { children: React.ReactNode }) {
             await supabase.from('user_data').upsert({
                 user_id: user.id,
                 history: history
-            });
+            }, { onConflict: 'user_id' });
         }, 2000); // 2s debounce
 
         return () => clearTimeout(timeout);

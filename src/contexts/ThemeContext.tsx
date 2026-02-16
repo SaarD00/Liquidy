@@ -119,7 +119,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       await supabase.from('user_data').upsert({
         user_id: user.id,
         theme_preferences: { theme, colorTheme }
-      });
+      }, { onConflict: 'user_id' });
     }, 1000);
 
     return () => clearTimeout(timeout);

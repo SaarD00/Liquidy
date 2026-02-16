@@ -83,20 +83,10 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
       if (data) {
         if (data.favorites && Array.isArray(data.favorites)) {
-          setLikedSongs(prev => {
-            const localIds = new Set(prev.map(t => t.id));
-            const newItems = data.favorites.filter((t: SearchTrack) => !localIds.has(t.id));
-            if (newItems.length === 0) return prev; // Optimization: No change
-            return [...prev, ...newItems];
-          });
+          setLikedSongs(data.favorites);
         }
         if (data.playlists && Array.isArray(data.playlists)) {
-          setPlaylists(prev => {
-            const localIds = new Set(prev.map(p => p.id));
-            const newItems = data.playlists.filter((p: Playlist) => !localIds.has(p.id));
-            if (newItems.length === 0) return prev; // Optimization: No change
-            return [...prev, ...newItems];
-          });
+          setPlaylists(data.playlists);
         }
       }
     };
@@ -158,12 +148,23 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   // Helper to save to Supabase (Debounced)
   const persistData = async () => {
     if (!user) return;
-    // Always read from refs to get the absolute latest state at execution time
-    await supabase.from('user_data').upsert({
-      user_id: user.id,
-      favorites: likedSongsRef.current,
-      playlists: playlistsRef.current
-    });
+    try {
+      const { error } = await supabase.from('user_data').upsert(
+        {
+          user_id: user.id,
+          favorites: likedSongsRef.current,
+          playlists: playlistsRef.current
+        },
+        { onConflict: 'user_id' }
+      );
+
+      if (error) {
+        console.error("Error saving user data:", error);
+        toast.error("Failed to save changes");
+      }
+    } catch (err) {
+      console.error("Unexpected error saving user data:", err);
+    }
   };
 
   const scheduleSave = useCallback(() => {
