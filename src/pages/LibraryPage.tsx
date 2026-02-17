@@ -24,7 +24,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="min-h-screen pb-36 md:pb-28">
+    <div className="min-h-screen overflow-scroll h-screen scrollbar-hide pb-36 md:pb-28">
       <div className="p-4 md:p-6 max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -104,6 +104,7 @@ export default function LibraryPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className=""
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-display font-semibold text-foreground">Your Playlists</h2>
@@ -117,7 +118,7 @@ export default function LibraryPage() {
           </div>
 
           {playlists.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3  lg:grid-cols-4 gap-4">
               {playlists.map((playlist, index) => (
                 <motion.div
                   key={playlist.id}

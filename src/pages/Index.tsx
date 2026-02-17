@@ -129,14 +129,14 @@ export default function HomePage() {
       <DesktopSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex md:overflow-hidden  px-4 pb-28 gap-4 z-10 relative pl-0 md:pl-80">
+      <main className="flex-1 flex md:overflow-hidden   px-4 pb-28 gap-4 z-10 relative pl-0 md:pl-80">
 
         {/* Center Content */}
-        <section className="flex-1 glass-panel rounded-2xl overflow-scroll md:h-[73vh] scrollbar-hide flex flex-col relative overflow-hidden">
+        <section className="flex-1   glass-panel rounded-2xl overflow-scroll md:h-[73vh] scrollbar-hide flex flex-col relative overflow-hidden">
           {/* Emerald Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
 
-          <div className="flex-1 overflow-y-auto p-8 relative z-10">
+          <div className="flex-1  overflow-y-auto p-8 relative z-10">
             {/* Greeting */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold tracking-tight">{getGreeting()}</h2>
@@ -165,7 +165,7 @@ export default function HomePage() {
             )}
 
             {/* Section Title */}
-            <div className="mb-12">
+            <div className="mb-12  ">
               <div className="flex justify-between items-end mb-6">
                 <h3 className="text-xl font-bold">
                   {searched ? "Search Results" : "Made for you"}
@@ -178,7 +178,7 @@ export default function HomePage() {
               </div>
 
               {/* Track Cards Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              <div className="grid grid-cols-2  sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {displayTracks.map((track, index) => (
                   <motion.div
                     key={track.id}
