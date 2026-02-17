@@ -56,6 +56,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const youtubePlayerRef = useRef<any | null>(null);
   const isFetchingRef = useRef(false);
+
+  const currentTimeRef = useRef(0);
+  const durationRef = useRef(0);
   const { history } = useHistory();
 
   const [state, setState] = useState<PlayerState>(() => {
@@ -193,9 +196,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
 
     audio.addEventListener("timeupdate", () => {
+      currentTimeRef.current = audio.currentTime;
       setState((s) => ({ ...s, currentTime: audio.currentTime }));
     });
     audio.addEventListener("loadedmetadata", () => {
+      durationRef.current = audio.duration;
       setState((s) => ({ ...s, duration: audio.duration }));
     });
     audio.addEventListener("ended", () => {
@@ -393,6 +398,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       const audio = audioRef.current;
       if (audio) {
         audio.currentTime = time;
+        currentTimeRef.current = time;
         setState((s) => ({ ...s, currentTime: time }));
       }
     }
@@ -452,6 +458,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // YouTube time update handler
   const onYouTubeTimeUpdate = useCallback((currentTime: number, duration: number) => {
+    currentTimeRef.current = currentTime;
+    durationRef.current = duration;
     setState((s) => ({ ...s, currentTime, duration }));
   }, []);
 
@@ -463,6 +471,81 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const clearQueue = useCallback(() => {
     setState((s) => ({ ...s, queue: [] }));
   }, []);
+
+  // Media Session API Support (Background Playback & Lock Screen Controls)
+  useEffect(() => {
+    if (!state.currentTrack) return;
+
+    if ('mediaSession' in navigator) {
+      const { name, artistName, albumName } = state.currentTrack.attributes;
+
+      // Update metadata
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: name,
+        artist: artistName,
+        album: albumName,
+        artwork: [
+          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 96), sizes: '96x96', type: 'image/png' },
+          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 128), sizes: '128x128', type: 'image/png' },
+          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 192), sizes: '192x192', type: 'image/png' },
+          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 256), sizes: '256x256', type: 'image/png' },
+          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 384), sizes: '384x384', type: 'image/png' },
+          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 512), sizes: '512x512', type: 'image/png' },
+        ]
+      });
+    }
+  }, [state.currentTrack]);
+
+  // Update Media Session Action Handlers
+  // Update Media Session Action Handlers
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => {
+        togglePlay();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        togglePlay();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        prevTrack();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        nextTrack();
+      });
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined && details.seekTime !== null) {
+          seekTo(details.seekTime);
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const skipTime = details.seekOffset || 10;
+        seekTo(Math.max(currentTimeRef.current - skipTime, 0));
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const skipTime = details.seekOffset || 10;
+        seekTo(Math.min(currentTimeRef.current + skipTime, durationRef.current));
+      });
+    }
+  }, [togglePlay, prevTrack, nextTrack, seekTo]);
+
+  // Update Playback State & Position State
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+
+      if ('setPositionState' in navigator.mediaSession && state.duration > 0) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: state.duration,
+            playbackRate: state.isPlaying ? 1 : 0,
+            position: Math.min(state.currentTime, state.duration),
+          });
+        } catch (error) {
+          // Flatten errors if duration/position are invalid temporarily
+        }
+      }
+    }
+  }, [state.isPlaying, state.duration, state.currentTrack]);
 
   return (
     <PlayerContext.Provider

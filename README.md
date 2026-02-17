@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Saarify-Music%20Streaming-8B5CF6?style=for-the-badge&logo=music&logoColor=white" alt="Saarify" />
+  <img src="https://img.shields.io/badge/Liquidy-Melodies-8B5CF6?style=for-the-badge&logo=music&logoColor=white" alt="Liquidy Melodies" />
 </p>
 
-<h1 align="center">🎵 Saarify</h1>
+<h1 align="center">🎵 Liquidy Melodies</h1>
 
 <p align="center">
-  <strong>A modern, beautiful music streaming web app with YouTube integration</strong>
+  <strong>A premium, AI-powered music streaming PWA with dynamic aesthetics and seamless background playback.</strong>
 </p>
 
 <p align="center">
@@ -13,7 +13,6 @@
   <a href="#demo">Demo</a> •
   <a href="#installation">Installation</a> •
   <a href="#configuration">Configuration</a> •
-  <a href="#usage">Usage</a> •
   <a href="#tech-stack">Tech Stack</a> •
   <a href="#contributing">Contributing</a> •
   <a href="#license">License</a>
@@ -23,45 +22,46 @@
   <img src="https://img.shields.io/badge/react-18.x-61DAFB?style=flat-square&logo=react" alt="React" />
   <img src="https://img.shields.io/badge/typescript-5.x-3178C6?style=flat-square&logo=typescript" alt="TypeScript" />
   <img src="https://img.shields.io/badge/vite-5.x-646CFF?style=flat-square&logo=vite" alt="Vite" />
-  <img src="https://img.shields.io/badge/tailwindcss-3.x-06B6D4?style=flat-square&logo=tailwindcss" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/supabase-backend-3ECF8E?style=flat-square&logo=supabase" alt="Supabase" />
+  <img src="https://img.shields.io/badge/gemini-ai-8E75B2?style=flat-square&logo=google" alt="Gemini AI" />
+  <img src="https://img.shields.io/badge/pwa-ready-5A0FC8?style=flat-square&logo=pwa" alt="PWA" />
 </p>
 
 ---
 
 ## ✨ Features
 
-### 🎧 Music Playback
-- **YouTube Integration** - Stream music directly from YouTube
-- **Shazam Fallback** - Automatic fallback to Shazam API when YouTube results aren't available
-- **Background Playback** - Music continues playing while browsing
-- **Play/Pause/Resume** - Full playback controls with resume from where you left off
-- **Progress Bar** - Real-time progress tracking with seek functionality
+### 🎧 Immersive Playback
+- **Universal Streaming** - Seamless integration with YouTube and Shazam APIs.
+- **Background Playback (PWA)** - Continue listening while using other apps or with the screen locked (Mobile/Tablet supported).
+- **Lock Screen Controls** - Native Media Session API integration for play, pause, seek, and artwork display on lock screens.
+- **Smart Queue** - "Up Next" management with drag-and-drop reordering.
 
-### 🎨 Beautiful UI/UX
-- **Modern Design** - Premium glassmorphism design with smooth animations
-- **Dynamic Background** - Background gradient changes based on album art colors (optional)
-- **Responsive Layout** - Works seamlessly on desktop, tablet, and mobile
-- **Dark/Light Themes** - Multiple theme options with color customization
-- **Smooth Animations** - Framer Motion powered transitions and micro-interactions
+### 🤖 AI-Powered Experience
+- **Gemini AI DJ** - Smart song recommendations based on your listening history and current mood.
+- **Auto-Mix** - Infinite playback that keeps the vibe going when your queue ends.
 
-### 📱 Core Features
-- **Search** - Search for any song or artist
-- **Quick Picks** - Pre-defined genre shortcuts (Lo-fi, Rock, Pop, Hip Hop, Jazz, Electronic)
-- **Queue Management** - Up Next queue with track management
-- **Favorites** - Save your favorite tracks
-- **Library** - Access your saved music
+### 🎨 Stunning Visuals
+- **Liquid Aesthetics** - Glassmorphism design with fluid animations and transitions.
+- **Dynamic Themes** - The UI automatically adapts colors based on the artwork of the currently playing track.
+- **Obsidian Mode** - A deep, sleeker dark mode for AMOLED screens.
+- **Responsive** - Perfectly optimized for Desktop, Tablet, and Mobile devices.
 
-### ⚙️ Settings
-- **Theme Toggle** - Switch between light and dark mode
-- **Color Themes** - Choose from multiple accent color options
-- **Dynamic Background** - Toggle album art-based background colors
+### 📲 Progressive Web App (PWA)
+- **Installable** - Add to your Home Screen on iOS, Android, Windows, and macOS.
+- **App-Like Feel** - Runs standalone without browser UI, feeling just like a native app.
+- **Offline Capable** - Caches core assets for faster load times.
+
+### 👤 User Features
+- **Supabase Auth** - Secure user accounts and profile management.
+- **Cloud Sync** - Sync your playlists, favorites, and history across all your devices.
+- **Social Implementation** - (Coming Soon) Share playlists and see what friends are listening to.
 
 ---
 
 ## 🚀 Demo
 
-> Add your deployed demo link here
+> [Add your deployed demo link here]
 
 ---
 
@@ -71,13 +71,15 @@
 
 - Node.js 18.x or higher
 - npm or yarn
-- RapidAPI account (for YouTube and Shazam APIs)
+- RapidAPI Account (YouTube & Shazam APIs)
+- Supabase Project
+- Google Gemini API Key
 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/saarify.git
-cd saarify
+git clone https://github.com/yourusername/liquid-melodies.git
+cd liquid-melodies
 ```
 
 ### Install Dependencies
@@ -95,11 +97,23 @@ yarn install
 cp .env.example .env
 ```
 
-2. Add your API keys to `.env`:
+2. Configure your `.env` file with the following keys:
+
 ```env
-VITE_RAPIDAPI_KEY=your_rapidapi_key_here
+# App
+VITE_APP_URL=http://localhost:8080
+
+# External APIs (RapidAPI)
+VITE_RAPIDAPI_KEY=your_rapidapi_key
 VITE_YOUTUBE_HOST=youtube-v31.p.rapidapi.com
 VITE_SHAZAM_HOST=shazam-core.p.rapidapi.com
+
+# AI
+VITE_GEMINI_API_KEY=your_gemini_api_key
+
+# Backend (Supabase)
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### Start Development Server
@@ -110,111 +124,21 @@ npm run dev
 yarn dev
 ```
 
-The app will be available at `http://localhost:5173`
-
----
-
-## 🔧 Configuration
-
-### API Keys
-
-This app uses RapidAPI to access YouTube and Shazam APIs:
-
-1. Create an account at [RapidAPI](https://rapidapi.com)
-2. Subscribe to:
-   - [YouTube v3 API](https://rapidapi.com/ytdlfree/api/youtube-v31)
-   - [Shazam Core API](https://rapidapi.com/tipsters/api/shazam-core)
-3. Copy your RapidAPI key to the `.env` file
-
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `VITE_RAPIDAPI_KEY` | Your RapidAPI key | Yes |
-| `VITE_YOUTUBE_HOST` | YouTube API host | No (has default) |
-| `VITE_SHAZAM_HOST` | Shazam API host | No (has default) |
-
----
-
-## 🎯 Usage
-
-### Playing Music
-
-1. **Search** - Use the search bar to find songs or artists
-2. **Quick Picks** - Click on genre buttons for quick discovery
-3. **Play** - Click on any track card to start playing
-4. **Controls** - Use the floating player for play/pause, skip, and volume
-
-### Player Controls
-
-- **Play/Pause** - Click the play button or use the floating player
-- **Seek** - Click anywhere on the progress bar to jump to that position
-- **Skip** - Use next/previous buttons to navigate the queue
-- **Volume** - Adjust volume using the volume slider (desktop)
-
-### Settings
-
-Access settings via the gear icon in the sidebar:
-- Toggle between light/dark mode
-- Enable/disable dynamic background
-- Choose accent colors
+The app will be available at `http://localhost:8080`
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Technology | Purpose |
-|------------|---------|
-| **React 18** | UI Framework |
-| **TypeScript** | Type Safety |
-| **Vite** | Build Tool & Dev Server |
-| **Tailwind CSS** | Styling |
-| **Framer Motion** | Animations |
-| **React Router** | Navigation |
-| **TanStack Query** | Data Fetching |
-| **Lucide React** | Icons |
-
-### APIs Used
-
-- **YouTube Data API v3** (via RapidAPI) - Primary music source
-- **Shazam Core API** (via RapidAPI) - Fallback music source
-
----
-
-## 📁 Project Structure
-
-```
-saarify/
-├── public/                 # Static assets
-├── src/
-│   ├── components/         # React components
-│   │   ├── MusicPlayer.tsx # Main player component
-│   │   ├── SearchBar.tsx   # Search component
-│   │   ├── BottomNav.tsx   # Mobile navigation
-│   │   └── ...
-│   ├── contexts/           # React contexts
-│   │   ├── PlayerContext.tsx
-│   │   ├── SettingsContext.tsx
-│   │   ├── FavoritesContext.tsx
-│   │   └── ThemeContext.tsx
-│   ├── lib/                # Utilities & API
-│   │   ├── api.ts          # API functions
-│   │   └── colorExtractor.ts
-│   ├── pages/              # Page components
-│   │   ├── Index.tsx
-│   │   ├── SearchPage.tsx
-│   │   ├── SettingsPage.tsx
-│   │   └── ...
-│   ├── App.tsx             # Main app component
-│   ├── main.tsx            # Entry point
-│   └── index.css           # Global styles
-├── .env.example            # Environment template
-├── .gitignore
-├── package.json
-├── tailwind.config.js
-├── tsconfig.json
-└── vite.config.ts
-```
+| Category | Technology |
+|----------|------------|
+| **Frontend** | React 18, TypeScript, Vite |
+| **Styling** | Tailwind CSS, Framer Motion |
+| **Backend** | Supabase (Auth, Database, Edge Functions) |
+| **AI** | Google Gemini Generative AI |
+| **PWA** | Vite PWA Plugin, Service Workers |
+| **APIs** | rapidapi-youtube-v3, rapidapi-shazam-core |
+| **State** | React Context API, TanStack Query |
 
 ---
 
@@ -228,13 +152,6 @@ Contributions are welcome! Please follow these steps:
 4. **Push** to the branch (`git push origin feature/amazing-feature`)
 5. **Open** a Pull Request
 
-### Development Guidelines
-
-- Follow the existing code style
-- Write meaningful commit messages
-- Test your changes thoroughly
-- Update documentation as needed
-
 ---
 
 ## 📝 License
@@ -245,25 +162,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [RapidAPI](https://rapidapi.com) for API access
-- [Tailwind CSS](https://tailwindcss.com) for styling utilities
-- [Framer Motion](https://www.framer.com/motion/) for animations
-- [Lucide](https://lucide.dev) for beautiful icons
-
----
-
-## 📧 Contact
-
-For questions or feedback, please open an issue or reach out:
-
-- GitHub Issues: [Create an issue](https://github.com/yourusername/saarify/issues)
+- [Supabase](https://supabase.com) for the incredible backend infrastructure.
+- [Google Gemini](https://deepmind.google/technologies/gemini/) for powering the AI recommendations.
+- [RapidAPI](https://rapidapi.com) for music data access.
+- [Lucide](https://lucide.dev) for the clean icon set.
 
 ---
 
 <p align="center">
-  Made with ❤️ by the Saarify Team
-</p>
-
-<p align="center">
-  <strong>⭐ Star this repo if you like it!</strong>
+  Made with ❤️ by Arindam & The Liquidy Team
 </p>
