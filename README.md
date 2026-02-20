@@ -168,7 +168,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Lucide](https://lucide.dev) for the clean icon set.
 
 ---
-
-<p align="center">
-  Made with ❤️ by Arindam & The Liquidy Team
-</p>
