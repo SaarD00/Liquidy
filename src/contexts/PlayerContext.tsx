@@ -259,7 +259,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     // Check if it's a YouTube track
     if (isYouTubeTrack(track)) {
-      // Stop any playing audio, but play a silent audio loop to keep background playback & OS media session alive
+      // Play a silent audio loop to keep background playback & OS media session alive
       if (audio) {
         audio.src = SILENT_AUDIO_URI;
         audio.loop = true;
@@ -301,7 +301,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     if (url) {
       isYouTubeRef.current = false;
-      audio.loop = false; // Important: Disable loop for real tracks
+      audio.loop = false; // Disable loop for real tracks
       audio.src = url;
       audio.volume = 0; // Start silent for fade-in
       await audio.play();
@@ -514,164 +514,83 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, queue: [] }));
   }, []);
 
-  // ─── Media Session API ───────────────────────────────────────────────────────
+  // ─── Media Session API (Progressier Pattern) ────────────────────────────────────────────────
   // Stable ref so once-registered handlers always call the latest functions.
   const mediaSessionActionsRef = useRef({
     nextTrack: () => { },
     prevTrack: () => { },
-    seekTo: (_time: number) => { },
+    seekBackward: () => { },
+    seekForward: () => { },
+    togglePlay: () => { }
   });
 
-  // Track whether we are in YouTube mode WITHOUT creating a new closure each render
   const isYouTubeRef = useRef(state.isYouTube);
 
-  // Keep both refs in sync after every render
   useEffect(() => {
-    mediaSessionActionsRef.current = { nextTrack, prevTrack, seekTo };
+    mediaSessionActionsRef.current = {
+      nextTrack,
+      prevTrack,
+      togglePlay,
+      seekBackward: () => seekTo(Math.max(currentTimeRef.current - 10, 0)),
+      seekForward: () => seekTo(Math.min(currentTimeRef.current + 10, durationRef.current))
+    };
     isYouTubeRef.current = state.isYouTube;
   });
 
-  // Register action handlers ONCE on mount.
-  // play / pause set state DIRECTLY — never use togglePlay() here because
-  // togglePlay() *flips* the current state: if the song was already playing
-  // and the OS fires 'play', togglePlay would immediately pause it again.
-  useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
-
-    navigator.mediaSession.setActionHandler('play', () => {
-      if (isYouTubeRef.current) {
-        // YouTube: update state so the YouTubePlayer component reacts
-        setState((s) => ({ ...s, isPlaying: true }));
-        const audio = audioRef.current;
-        if (audio) audio.play().catch(() => { });
-      } else {
-        const audio = audioRef.current;
-        if (audio && audio.src) {
-          // audio 'play' event listener will flip isPlaying → true on success
-          audio.play().catch(() => {
-            // Browser refused (e.g. autoplay policy) — keep UI consistent
-            setState((s) => ({ ...s, isPlaying: false }));
-          });
-        }
-      }
-    });
-
-    navigator.mediaSession.setActionHandler('pause', () => {
-      if (isYouTubeRef.current) {
-        setState((s) => ({ ...s, isPlaying: false }));
-        const audio = audioRef.current;
-        if (audio && !audio.paused) audio.pause();
-      } else {
-        const audio = audioRef.current;
-        if (audio) {
-          audio.pause();
-          // audio 'pause' event listener will flip isPlaying → false
-        }
-      }
-    });
-
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      mediaSessionActionsRef.current.prevTrack();
-    });
-
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      mediaSessionActionsRef.current.nextTrack();
-    });
-
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
-      if (details.seekTime != null) {
-        const audio = audioRef.current;
-        if (audio && details.fastSeek && 'fastSeek' in audio) {
-          (audio as any).fastSeek(details.seekTime);
-        }
-        mediaSessionActionsRef.current.seekTo(details.seekTime);
-      }
-    });
-
-    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-      const skip = details.seekOffset ?? 10;
-      mediaSessionActionsRef.current.seekTo(
-        Math.max(currentTimeRef.current - skip, 0)
-      );
-    });
-
-    navigator.mediaSession.setActionHandler('seekforward', (details) => {
-      const skip = details.seekOffset ?? 10;
-      mediaSessionActionsRef.current.seekTo(
-        Math.min(currentTimeRef.current + skip, durationRef.current)
-      );
-    });
-
-    // Cleanup on unmount
-    return () => {
-      (['play', 'pause', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward'] as MediaSessionAction[]).forEach(
-        (action) => {
-          try { navigator.mediaSession.setActionHandler(action, null); } catch { }
-        }
-      );
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally empty — all live state accessed through stable refs
-
-  // ── Visibility / foreground restore handler ───────────────────────────────
-  // On iOS Safari (and some Android browsers) the media session metadata and
-  // playback state can become stale after the app is backgrounded. Re-push
-  // everything when the user brings the app back to the foreground.
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (!('mediaSession' in navigator)) return;
-
-      // Re-sync playback state from the actual audio element
-      const audio = audioRef.current;
-      if (audio) {
-        navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-
-  // Update metadata whenever the current track changes
+  // Apply metadata AND handlers whenever currentTrack changes
   useEffect(() => {
     if (!('mediaSession' in navigator) || !state.currentTrack) return;
 
-    const { name, artistName, albumName } = state.currentTrack.attributes;
+    const { name, artistName, albumName, artwork } = state.currentTrack.attributes;
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: name,
       artist: artistName,
       album: albumName ?? '',
       artwork: [
-        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 96), sizes: '96x96', type: 'image/png' },
-        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 128), sizes: '128x128', type: 'image/png' },
-        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 192), sizes: '192x192', type: 'image/png' },
-        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 256), sizes: '256x256', type: 'image/png' },
-        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 384), sizes: '384x384', type: 'image/png' },
-        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 512), sizes: '512x512', type: 'image/png' },
+        { src: getArtworkUrl(artwork.url, 96), sizes: '96x96', type: 'image/png' },
+        { src: getArtworkUrl(artwork.url, 128), sizes: '128x128', type: 'image/png' },
+        { src: getArtworkUrl(artwork.url, 256), sizes: '256x256', type: 'image/png' },
+        { src: getArtworkUrl(artwork.url, 512), sizes: '512x512', type: 'image/png' },
       ],
     });
+
+    // We tie the controls of the compact player directly to our refs
+    navigator.mediaSession.setActionHandler('play', () => mediaSessionActionsRef.current.togglePlay());
+    navigator.mediaSession.setActionHandler('pause', () => mediaSessionActionsRef.current.togglePlay());
+    navigator.mediaSession.setActionHandler('previoustrack', () => mediaSessionActionsRef.current.prevTrack());
+    navigator.mediaSession.setActionHandler('nexttrack', () => mediaSessionActionsRef.current.nextTrack());
+    navigator.mediaSession.setActionHandler('seekbackward', () => mediaSessionActionsRef.current.seekBackward());
+    navigator.mediaSession.setActionHandler('seekforward', () => mediaSessionActionsRef.current.seekForward());
   }, [state.currentTrack]);
 
-  // Sync playback state & seek position so the notification bar shows the timeline
+  // Sync playback state
   useEffect(() => {
-    if (!('mediaSession' in navigator)) return;
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+    }
+  }, [state.isPlaying]);
 
-    navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+  // We report the playback position to the compact player every 300ms using setInterval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!('mediaSession' in navigator)) return;
+      if (!state.isPlaying) return; // Only report when actively playing
 
-    if ('setPositionState' in navigator.mediaSession && state.duration > 0) {
+      const dur = durationRef.current;
+      if (!dur || dur <= 0) return;
+
       try {
         navigator.mediaSession.setPositionState({
-          duration: state.duration,
-          playbackRate: 1, // must always be > 0; pausing is reflected via playbackState above
-          position: Math.min(state.currentTime, state.duration),
+          duration: parseInt(dur.toString(), 10),
+          playbackRate: 1,
+          position: parseInt(currentTimeRef.current.toString(), 10)
         });
-      } catch {
-        // Ignore transient errors when duration/position aren't ready yet
-      }
-    }
-  }, [state.isPlaying, state.currentTime, state.duration]);
+      } catch (err) { }
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, [state.isPlaying]);
 
   return (
     <PlayerContext.Provider
