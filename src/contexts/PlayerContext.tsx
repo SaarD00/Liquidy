@@ -15,6 +15,8 @@ interface PlayerState {
   volume: number; // Added volume to state
 }
 
+const SILENT_AUDIO_URI = "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//M0QAAAAAASW5mbwAAAA8AAAAEAAABIwB1XV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dHxsAAAAAAABhAAAAQUxBTUUzLjk5LjVyQQAAAAAAAAAAAAAABRAAAAEQAMRkAgAAEAAAAAAAAAAAAAEAAAMjD/8zRAAAAYQAAAoAAAAAAgAAAP//MzQAAAAAABgAAAOAAAAP////8zNAAAAAAAGAAAFAAAAD////PzNEAAAAAAAYAAAcAAAAf///8=";
+
 const PLAYER_STORAGE_KEY = "sonicflow_player_state";
 
 const DEFAULT_STATE: PlayerState = {
@@ -199,14 +201,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audio.preload = 'auto';
 
     audio.addEventListener("timeupdate", () => {
+      if (isYouTubeRef.current) return;
       currentTimeRef.current = audio.currentTime;
       setState((s) => ({ ...s, currentTime: audio.currentTime }));
     });
     audio.addEventListener("loadedmetadata", () => {
+      if (isYouTubeRef.current) return;
       durationRef.current = audio.duration;
       setState((s) => ({ ...s, duration: audio.duration }));
     });
     audio.addEventListener("ended", () => {
+      if (isYouTubeRef.current) return;
       if (nextTrackRef.current) {
         nextTrackRef.current();
       } else {
@@ -254,11 +259,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     // Check if it's a YouTube track
     if (isYouTubeTrack(track)) {
-      // Stop any playing audio
+      // Stop any playing audio, but play a silent audio loop to keep background playback & OS media session alive
       if (audio) {
-        audio.pause();
-        audio.src = "";
+        audio.src = SILENT_AUDIO_URI;
+        audio.loop = true;
+        audio.play().catch(e => console.error("Silent audio play failed", e));
       }
+
+      isYouTubeRef.current = true; // Synchronously update ref for event listeners
 
       setState((s) => ({
         ...s,
@@ -292,6 +300,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (url) {
+      isYouTubeRef.current = false;
+      audio.loop = false; // Important: Disable loop for real tracks
       audio.src = url;
       audio.volume = 0; // Start silent for fade-in
       await audio.play();
@@ -324,6 +334,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (state.isYouTube) {
       // For YouTube, just toggle the state
       // The MusicPlayer component will handle syncing with the iframe
+      const audio = audioRef.current;
+      if (audio) {
+        if (state.isPlaying) audio.pause();
+        else audio.play().catch(() => { });
+      }
       setState((s) => ({ ...s, isPlaying: !s.isPlaying }));
     } else {
       // Toggle audio player
@@ -464,6 +479,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // YouTube state change handler (state codes: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering)
   const onYouTubeStateChange = useCallback((playerState: number) => {
+    const audio = audioRef.current;
+
     // 1 = Playing
     if (playerState === 1 && shouldFadeIn.current) {
       fadeIn();
@@ -471,8 +488,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     if (playerState === 1) {
       setState((s) => ({ ...s, isPlaying: true }));
+      if (audio && audio.paused) audio.play().catch(() => { });
     } else if (playerState === 2) {
       setState((s) => ({ ...s, isPlaying: false }));
+      if (audio && !audio.paused) audio.pause();
     } else if (playerState === 0) {
       // Song ended
       nextTrack();
@@ -523,6 +542,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (isYouTubeRef.current) {
         // YouTube: update state so the YouTubePlayer component reacts
         setState((s) => ({ ...s, isPlaying: true }));
+        const audio = audioRef.current;
+        if (audio) audio.play().catch(() => { });
       } else {
         const audio = audioRef.current;
         if (audio && audio.src) {
@@ -538,6 +559,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     navigator.mediaSession.setActionHandler('pause', () => {
       if (isYouTubeRef.current) {
         setState((s) => ({ ...s, isPlaying: false }));
+        const audio = audioRef.current;
+        if (audio && !audio.paused) audio.pause();
       } else {
         const audio = audioRef.current;
         if (audio) {
