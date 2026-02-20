@@ -192,8 +192,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
 
-    audioRef.current = new Audio();
-    const audio = audioRef.current;
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    // Helps mobile browsers buffer the track aggressively
+    audio.preload = 'auto';
 
     audio.addEventListener("timeupdate", () => {
       currentTimeRef.current = audio.currentTime;
@@ -204,11 +207,31 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, duration: audio.duration }));
     });
     audio.addEventListener("ended", () => {
-      // Create a stable bridge to the latest nextTrack function
       if (nextTrackRef.current) {
         nextTrackRef.current();
       } else {
         setState((s) => ({ ...s, isPlaying: false }));
+      }
+    });
+
+    // ── Bidirectional state sync via native audio events ─────────────────────
+    // When the OS pauses audio (incoming call, audio focus stolen by another
+    // app, iOS screen-lock interruption, etc.) the browser fires these events.
+    // Without these listeners the React UI would show "playing" while the
+    // speaker is silent.
+    audio.addEventListener("play", () => {
+      setState((s) => ({ ...s, isPlaying: true }));
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+      }
+    });
+    audio.addEventListener("pause", () => {
+      // 'ended' fires BEFORE 'pause' on some browsers — skip that case
+      if (!audio.ended) {
+        setState((s) => ({ ...s, isPlaying: false }));
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
       }
     });
 
@@ -472,80 +495,160 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, queue: [] }));
   }, []);
 
-  // Media Session API Support (Background Playback & Lock Screen Controls)
+  // ─── Media Session API ───────────────────────────────────────────────────────
+  // Stable ref so once-registered handlers always call the latest functions.
+  const mediaSessionActionsRef = useRef({
+    nextTrack: () => { },
+    prevTrack: () => { },
+    seekTo: (_time: number) => { },
+  });
+
+  // Track whether we are in YouTube mode WITHOUT creating a new closure each render
+  const isYouTubeRef = useRef(state.isYouTube);
+
+  // Keep both refs in sync after every render
   useEffect(() => {
-    if (!state.currentTrack) return;
+    mediaSessionActionsRef.current = { nextTrack, prevTrack, seekTo };
+    isYouTubeRef.current = state.isYouTube;
+  });
 
-    if ('mediaSession' in navigator) {
-      const { name, artistName, albumName } = state.currentTrack.attributes;
-
-      // Update metadata
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: name,
-        artist: artistName,
-        album: albumName,
-        artwork: [
-          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 96), sizes: '96x96', type: 'image/png' },
-          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 128), sizes: '128x128', type: 'image/png' },
-          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 192), sizes: '192x192', type: 'image/png' },
-          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 256), sizes: '256x256', type: 'image/png' },
-          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 384), sizes: '384x384', type: 'image/png' },
-          { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 512), sizes: '512x512', type: 'image/png' },
-        ]
-      });
-    }
-  }, [state.currentTrack]);
-
-  // Update Media Session Action Handlers
-  // Update Media Session Action Handlers
+  // Register action handlers ONCE on mount.
+  // play / pause set state DIRECTLY — never use togglePlay() here because
+  // togglePlay() *flips* the current state: if the song was already playing
+  // and the OS fires 'play', togglePlay would immediately pause it again.
   useEffect(() => {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => {
-        togglePlay();
-      });
-      navigator.mediaSession.setActionHandler('pause', () => {
-        togglePlay();
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        prevTrack();
-      });
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        nextTrack();
-      });
-      navigator.mediaSession.setActionHandler('seekto', (details) => {
-        if (details.seekTime !== undefined && details.seekTime !== null) {
-          seekTo(details.seekTime);
-        }
-      });
-      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-        const skipTime = details.seekOffset || 10;
-        seekTo(Math.max(currentTimeRef.current - skipTime, 0));
-      });
-      navigator.mediaSession.setActionHandler('seekforward', (details) => {
-        const skipTime = details.seekOffset || 10;
-        seekTo(Math.min(currentTimeRef.current + skipTime, durationRef.current));
-      });
-    }
-  }, [togglePlay, prevTrack, nextTrack, seekTo]);
+    if (!('mediaSession' in navigator)) return;
 
-  // Update Playback State & Position State
-  useEffect(() => {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
-
-      if ('setPositionState' in navigator.mediaSession && state.duration > 0) {
-        try {
-          navigator.mediaSession.setPositionState({
-            duration: state.duration,
-            playbackRate: state.isPlaying ? 1 : 0,
-            position: Math.min(state.currentTime, state.duration),
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (isYouTubeRef.current) {
+        // YouTube: update state so the YouTubePlayer component reacts
+        setState((s) => ({ ...s, isPlaying: true }));
+      } else {
+        const audio = audioRef.current;
+        if (audio && audio.src) {
+          // audio 'play' event listener will flip isPlaying → true on success
+          audio.play().catch(() => {
+            // Browser refused (e.g. autoplay policy) — keep UI consistent
+            setState((s) => ({ ...s, isPlaying: false }));
           });
-        } catch (error) {
-          // Flatten errors if duration/position are invalid temporarily
         }
       }
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (isYouTubeRef.current) {
+        setState((s) => ({ ...s, isPlaying: false }));
+      } else {
+        const audio = audioRef.current;
+        if (audio) {
+          audio.pause();
+          // audio 'pause' event listener will flip isPlaying → false
+        }
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      mediaSessionActionsRef.current.prevTrack();
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      mediaSessionActionsRef.current.nextTrack();
+    });
+
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime != null) {
+        const audio = audioRef.current;
+        if (audio && details.fastSeek && 'fastSeek' in audio) {
+          (audio as any).fastSeek(details.seekTime);
+        }
+        mediaSessionActionsRef.current.seekTo(details.seekTime);
+      }
+    });
+
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      const skip = details.seekOffset ?? 10;
+      mediaSessionActionsRef.current.seekTo(
+        Math.max(currentTimeRef.current - skip, 0)
+      );
+    });
+
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      const skip = details.seekOffset ?? 10;
+      mediaSessionActionsRef.current.seekTo(
+        Math.min(currentTimeRef.current + skip, durationRef.current)
+      );
+    });
+
+    // Cleanup on unmount
+    return () => {
+      (['play', 'pause', 'previoustrack', 'nexttrack', 'seekto', 'seekbackward', 'seekforward'] as MediaSessionAction[]).forEach(
+        (action) => {
+          try { navigator.mediaSession.setActionHandler(action, null); } catch { }
+        }
+      );
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — all live state accessed through stable refs
+
+  // ── Visibility / foreground restore handler ───────────────────────────────
+  // On iOS Safari (and some Android browsers) the media session metadata and
+  // playback state can become stale after the app is backgrounded. Re-push
+  // everything when the user brings the app back to the foreground.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!('mediaSession' in navigator)) return;
+
+      // Re-sync playback state from the actual audio element
+      const audio = audioRef.current;
+      if (audio) {
+        navigator.mediaSession.playbackState = audio.paused ? 'paused' : 'playing';
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Update metadata whenever the current track changes
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !state.currentTrack) return;
+
+    const { name, artistName, albumName } = state.currentTrack.attributes;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: name,
+      artist: artistName,
+      album: albumName ?? '',
+      artwork: [
+        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 96), sizes: '96x96', type: 'image/png' },
+        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 128), sizes: '128x128', type: 'image/png' },
+        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 192), sizes: '192x192', type: 'image/png' },
+        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 256), sizes: '256x256', type: 'image/png' },
+        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 384), sizes: '384x384', type: 'image/png' },
+        { src: getArtworkUrl(state.currentTrack.attributes.artwork.url, 512), sizes: '512x512', type: 'image/png' },
+      ],
+    });
+  }, [state.currentTrack]);
+
+  // Sync playback state & seek position so the notification bar shows the timeline
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.playbackState = state.isPlaying ? 'playing' : 'paused';
+
+    if ('setPositionState' in navigator.mediaSession && state.duration > 0) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: state.duration,
+          playbackRate: 1, // must always be > 0; pausing is reflected via playbackState above
+          position: Math.min(state.currentTime, state.duration),
+        });
+      } catch {
+        // Ignore transient errors when duration/position aren't ready yet
+      }
     }
-  }, [state.isPlaying, state.duration, state.currentTrack]);
+  }, [state.isPlaying, state.currentTime, state.duration]);
 
   return (
     <PlayerContext.Provider
